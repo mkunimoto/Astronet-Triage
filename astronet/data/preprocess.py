@@ -29,6 +29,7 @@ import tensorflow as tf
 
 from light_curve_util import keplersplinev2
 from light_curve_util import median_filter
+from light_curve_util import median_filter2
 from light_curve_util import util
 from light_curve_util import tess_io
 from statsmodels.robust import scale
@@ -52,18 +53,19 @@ def get_spline_mask(time, period, t0, tdur):
   outtran = (np.abs(phase) > tdur)
   return outtran
 
-def filter_outliers(time, flux):
-  valid = ~np.isnan(flux)
-  time, flux = time[valid], flux[valid]
-  inliers =  flux < (flux.mean() + 7 * flux.std())
-  return time[inliers], flux[inliers]
+# def filter_outliers(time, flux):
+#   valid = ~np.isnan(flux)
+#   time, flux = time[valid], flux[valid]
+#   inliers =  flux < (flux.mean() + 7 * flux.std())
+#   return time[inliers], flux[inliers]
 
 
 def detrend_and_filter(tic_id, time, flux, period, epoch, duration):
-  input_mask = get_spline_mask(time, period, epoch, duration / 24.0)
+  input_mask = get_spline_mask(time, period, epoch, duration)
   spline_flux = keplersplinev2.choosekeplersplinev2(time, flux, input_mask=input_mask)
   detrended_flux = flux / spline_flux
-  return filter_outliers(time, detrended_flux)
+  return time, detrended_flux
+#   return filter_outliers(time, detrended_flux)
 
 
 def phase_fold_and_sort_light_curve(time, flux, period, t0):
@@ -93,7 +95,7 @@ def phase_fold_and_sort_light_curve(time, flux, period, t0):
   return time, flux
 
 
-def generate_view(time, flux, num_bins, bin_width, t_min, t_max,
+def generate_view(time, flux, period, num_bins, bin_width, t_min, t_max,
                   normalize=True):
   """Generates a view of a phase-folded light curve using a median filter.
 
@@ -110,8 +112,8 @@ def generate_view(time, flux, num_bins, bin_width, t_min, t_max,
     1D NumPy array of size num_bins containing the median flux values of
     uniformly spaced bins on the phase-folded time axis.
   """
-  view = median_filter.median_filter(time, flux, num_bins, bin_width, t_min,
-                                     t_max)
+  # view = median_filter.median_filter(time, flux, num_bins, bin_width, t_min, t_max)
+  view = median_filter2.new_binning(time, flux, period, num_bins)
 
   if normalize:
     view -= np.median(view)
@@ -144,6 +146,7 @@ def global_view(time, flux, period, num_bins=201, bin_width_factor=1.2/201):
   return generate_view(
       time,
       flux,
+      period,
       num_bins=num_bins,
       bin_width=period * bin_width_factor,
       t_min=-period / 2,
@@ -171,6 +174,7 @@ def twice_global_view(time, flux, period, num_bins=402, bin_width_factor=1.2 / 4
   return generate_view(
       time,
       flux,
+      period,
       num_bins=num_bins,
       bin_width=period * bin_width_factor,
       t_min=-period,
@@ -182,6 +186,7 @@ def local_view(time,
                period,
                duration,
                num_bins=61,
+               bin_width_factor=0.16,
                num_durations=2):
   """Generates a 'local view' of a phase folded light curve.
   See Section 3.3 of Shallue & Vanderburg, 2018, The Astronomical Journal.
@@ -190,24 +195,23 @@ def local_view(time,
     time: 1D array of time values, sorted in ascending order.
     flux: 1D array of flux values.
     period: The period of the event (in days).
-    duration: The duration of the event (in hours).
+    duration: The duration of the event (in days).
     num_bins: The number of intervals to divide the time axis into.
+    bin_width_factor: Width of the bins, as a fraction of duration.
     num_durations: The number of durations to consider on either side of 0 (the
         event is assumed to be centered at 0).
   Returns:
     1D NumPy array of size num_bins containing the median flux values of
     uniformly spaced bins on the phase-folded time axis.
   """
-  duration /= 24.0
-  t_min=max(-period / 2, -duration * num_durations)
-  t_max=min(period / 2, duration * num_durations)
   return generate_view(
       time,
       flux,
+      period,
       num_bins=num_bins,
-      bin_width=(t_max - t_min) / num_bins,
-      t_min=t_min,
-      t_max=t_max)
+      bin_width=duration * bin_width_factor,
+      t_min=max(-period / 2, -duration * num_durations),
+      t_max=min(period / 2, duration * num_durations))
 
 
 def mask_transit(time, duration, period, mask_width=2, phase_limit=0.1):
@@ -286,6 +290,7 @@ def secondary_view(time,
                period,
                duration,
                num_bins=61,
+               bin_width_factor=0.16,
                num_durations=4
                ):
     """Generates a 'local view' of a phase folded light curve, centered on phase 0.5.
@@ -295,25 +300,29 @@ def secondary_view(time,
         time: 1D array of time values, sorted in ascending order, with the transit located at time 0.
         flux: 1D array of flux values.
         period: The period of the event (in days).
-        duration: The duration of the event (in hours).
+        duration: The duration of the event (in days).
         num_bins: The number of intervals to divide the time axis into.
+        bin_width_factor: Width of the bins, as a fraction of duration.
         num_durations: The number of durations to consider on either side of 0 (the
             event is assumed to be centered at 0).
       Returns:
         1D NumPy array of size num_bins containing the median flux values of
         uniformly spaced bins on the phase-folded time axis.
       """
-    duration /= 24.0
-    
+
     t0, new_time, new_flux = find_secondary(time, flux, duration, period)
     t_min = max(t0 - period / 2, t0 - duration * num_durations, new_time[0])
     t_max = min(t0 + period / 2, t0 + duration * num_durations, new_time[-1])
 
-    bin_width = (t_max - t_min) / num_bins
+    if bin_width_factor * duration < (t_max - t_min):
+        bin_width = bin_width_factor * duration
+    else:
+        bin_width = (t_max - t_min) / 40
 
     return generate_view(
         new_time,
         new_flux,
+        period,
         num_bins=num_bins,
         bin_width=bin_width,
         t_min=t_min,

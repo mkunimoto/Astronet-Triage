@@ -182,6 +182,7 @@ def _process_tce(tce):
   """
   # Read and process the light curve.
 
+  print(tce.Period, tce.Duration)
   time, flux = preprocess.read_and_process_light_curve(tce.tic_id, FLAGS.tess_data_dir, 'SAP_FLUX')
   time, flux = preprocess.detrend_and_filter(
       tce.tic_id, time, flux, tce.Period, tce.Epoc, tce.Duration)
