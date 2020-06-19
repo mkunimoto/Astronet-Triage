@@ -127,6 +127,7 @@ def median_filter(x, y, num_bins, bin_width=None, x_min=None, x_max=None):
     if j_end > j_start:
       # Compute and insert the median bin value.
       result[i] = np.median(y[j_start:j_end])
+      print('          ', i, j_start, j_end)
 
     # Advance the bin.
     bin_min += bin_spacing

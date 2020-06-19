@@ -182,15 +182,10 @@ def _process_tce(tce):
   """
   # Read and process the light curve.
 
-  try:
-    time, flux = preprocess.read_and_process_light_curve(tce.tic_id, FLAGS.tess_data_dir, 'SAP_FLUX')
-    time, flux = preprocess.detrend_and_filter(
-        tce.tic_id, time, flux, tce.Period, tce.Epoc, tce.Duration)
-    time, flux = preprocess.phase_fold_and_sort_light_curve(time, flux, tce.Period, tce.Epoc)
-  except:
-    logging.info(f"Error for {tce.tic_id}, falling back to old method.")
-    time, flux = preprocess.read_and_process_light_curve(tce.tic_id, FLAGS.tess_data_dir, 'KSPSAP_FLUX')
-    time, flux = preprocess.phase_fold_and_sort_light_curve(time, flux, tce.Period, tce.Epoc)
+  time, flux = preprocess.read_and_process_light_curve(tce.tic_id, FLAGS.tess_data_dir, 'SAP_FLUX')
+  time, flux = preprocess.detrend_and_filter(
+      tce.tic_id, time, flux, tce.Period, tce.Epoc, tce.Duration)
+  time, flux = preprocess.phase_fold_and_sort_light_curve(time, flux, tce.Period, tce.Epoc)
 
   # Generate the local and global views.
   global_view = preprocess.global_view(time, flux, tce.Period)
