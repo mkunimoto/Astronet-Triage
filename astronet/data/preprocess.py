@@ -53,9 +53,10 @@ def get_spline_mask(time, period, t0, tdur):
   outtran = (np.abs(phase) > tdur)
   return outtran
 
-# def filter_outliers(time, flux):
-#   valid = ~np.isnan(flux)
-#   time, flux = time[valid], flux[valid]
+def filter_outliers(time, flux):
+  valid = ~np.isnan(flux)
+  time, flux = time[valid], flux[valid]
+  return time, flux
 #   inliers =  flux < (flux.mean() + 7 * flux.std())
 #   return time[inliers], flux[inliers]
 
@@ -64,8 +65,7 @@ def detrend_and_filter(tic_id, time, flux, period, epoch, duration):
   input_mask = get_spline_mask(time, period, epoch, duration)
   spline_flux = keplersplinev2.choosekeplersplinev2(time, flux, input_mask=input_mask)
   detrended_flux = flux / spline_flux
-  return time, detrended_flux
-#   return filter_outliers(time, detrended_flux)
+  return filter_outliers(time, detrended_flux)
 
 
 def phase_fold_and_sort_light_curve(time, flux, period, t0):
