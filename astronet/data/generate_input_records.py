@@ -190,9 +190,9 @@ def _process_tce(tce, use_old_detrending=False):
   time, flux = preprocess.phase_fold_and_sort_light_curve(time, flux, tce.Period, tce.Epoc)
 
   # Generate the local and global views.
-  global_view = preprocess.global_view(time, flux, tce.Period)
-  local_view = preprocess.local_view(time, flux, tce.Period, tce.Duration)
-  secondary_view = preprocess.secondary_view(time, flux, tce.Period, tce.Duration)
+  global_view = preprocess.global_view(tce.tic_id, time, flux, tce.Period)
+  local_view = preprocess.local_view(tce.tic_id, time, flux, tce.Period, tce.Duration)
+  secondary_view = preprocess.secondary_view(tce.tic_id, time, flux, tce.Period, tce.Duration)
   if any(np.isnan(global_view)):
     raise ValueError("NaN in global view for {}".format(tce.tic_id))
   if any(np.isnan(local_view)):
@@ -253,7 +253,7 @@ def _process_file_shard(tce_table, file_name):
       writer.write(example.SerializeToString())
 
       num_processed += 1
-      if not num_processed % 10:
+      if not num_processed % 100:
         logging.info(
             "%s: Processed %d/%d items in shard %s",
             process_name, num_processed, shard_size, shard_name)

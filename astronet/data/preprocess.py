@@ -95,7 +95,7 @@ def phase_fold_and_sort_light_curve(time, flux, period, t0):
   return time, flux
 
 
-def generate_view(time, flux, period, num_bins, bin_width, t_min, t_max,
+def generate_view(tic_id, time, flux, period, num_bins, bin_width, t_min, t_max,
                   normalize=True):
   """Generates a view of a phase-folded light curve using a median filter.
 
@@ -112,8 +112,11 @@ def generate_view(time, flux, period, num_bins, bin_width, t_min, t_max,
     1D NumPy array of size num_bins containing the median flux values of
     uniformly spaced bins on the phase-folded time axis.
   """
-  # view = median_filter.median_filter(time, flux, num_bins, bin_width, t_min, t_max)
-  view = median_filter2.new_binning(time, flux, period, num_bins)
+  try:
+    view = median_filter2.new_binning(time, flux, period, num_bins)
+  except:
+    logging.warning("Robust mean failed %s, reverting to median filter", tic_id)
+    view = median_filter.median_filter(time, flux, num_bins, bin_width, t_min, t_max)
 
   if normalize:
     view -= np.median(view)
@@ -126,7 +129,7 @@ def generate_view(time, flux, period, num_bins, bin_width, t_min, t_max,
   return view
 
 
-def global_view(time, flux, period, num_bins=201, bin_width_factor=1.2/201):
+def global_view(tic_id, time, flux, period, num_bins=201, bin_width_factor=1.2/201):
   """Generates a 'global view' of a phase folded light curve.
 
   See Section 3.3 of Shallue & Vanderburg, 2018, The Astronomical Journal.
@@ -144,6 +147,7 @@ def global_view(time, flux, period, num_bins=201, bin_width_factor=1.2/201):
     uniformly spaced bins on the phase-folded time axis.
   """
   return generate_view(
+      tic_id, 
       time,
       flux,
       period,
@@ -172,6 +176,7 @@ def twice_global_view(time, flux, period, num_bins=402, bin_width_factor=1.2 / 4
     uniformly spaced bins on the phase-folded time axis.
   """
   return generate_view(
+      tic_id, 
       time,
       flux,
       period,
@@ -181,7 +186,8 @@ def twice_global_view(time, flux, period, num_bins=402, bin_width_factor=1.2 / 4
       t_max=period)
 
 
-def local_view(time,
+def local_view(tic_id, 
+               time,
                flux,
                period,
                duration,
@@ -205,6 +211,7 @@ def local_view(time,
     uniformly spaced bins on the phase-folded time axis.
   """
   return generate_view(
+      tic_id, 
       time,
       flux,
       period,
@@ -285,7 +292,8 @@ def find_secondary(time, flux, duration, period, mask_width=2, phase_limit=0.1):
     return best_t0, new_time, new_flux+1.
 
 
-def secondary_view(time,
+def secondary_view(tic_id, 
+                   time,
                flux,
                period,
                duration,
@@ -320,7 +328,8 @@ def secondary_view(time,
         bin_width = (t_max - t_min) / 40
 
     return generate_view(
-        new_time,
+        tic_id, 
+      new_time,
         new_flux,
         period,
         num_bins=num_bins,
