@@ -56,9 +56,8 @@ def get_spline_mask(time, period, t0, tdur):
 def filter_outliers(time, flux):
   valid = ~np.isnan(flux)
   time, flux = time[valid], flux[valid]
-  return time, flux
-#   inliers =  flux < (flux.mean() + 7 * flux.std())
-#   return time[inliers], flux[inliers]
+  inliers =  flux < (flux.mean() + 7 * flux.std())
+  return time[inliers], flux[inliers]
 
 
 def detrend_and_filter(tic_id, time, flux, period, epoch, duration):
@@ -115,7 +114,7 @@ def generate_view(tic_id, time, flux, period, num_bins, bin_width, t_min, t_max,
   try:
     view = median_filter2.new_binning(time, flux, period, num_bins)
   except:
-    logging.warning("Robust mean failed %s, reverting to median filter", tic_id)
+    logging.warning("Robust mean failed for %s, using median", tic_id)
     view = median_filter.median_filter(time, flux, num_bins, bin_width, t_min, t_max)
 
   if normalize:
