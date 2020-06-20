@@ -168,7 +168,7 @@ def _set_int64_feature(ex, name, value):
   ex.features.feature[name].int64_list.value.extend([int(v) for v in value])
 
 
-def _process_tce(tce):
+def _process_tce(tce, use_old_detrending=False):
   """Processes the light curve for a Kepler TCE and returns an Example proto.
 
   Args:
@@ -182,9 +182,11 @@ def _process_tce(tce):
   """
   # Read and process the light curve.
 
-  time, flux = preprocess.read_and_process_light_curve(tce.tic_id, FLAGS.tess_data_dir, 'SAP_FLUX')
-  time, flux = preprocess.detrend_and_filter(
-      tce.tic_id, time, flux, tce.Period, tce.Epoc, tce.Duration)
+  if use_old_detrending:
+    time, flux = preprocess.read_and_process_light_curve(tce.tic_id, FLAGS.tess_data_dir, 'KSPSAP_FLUX')
+  else:
+    time, flux = preprocess.read_and_process_light_curve(tce.tic_id, FLAGS.tess_data_dir, 'SAP_FLUX')
+    time, flux = preprocess.detrend_and_filter(tce.tic_id, time, flux, tce.Period, tce.Epoc, tce.Duration)
   time, flux = preprocess.phase_fold_and_sort_light_curve(time, flux, tce.Period, tce.Epoc)
 
   # Generate the local and global views.
@@ -236,11 +238,18 @@ def _process_file_shard(tce_table, file_name):
     num_skipped = 0
     for _, tce in tce_table.iterrows():
       try:
-        example = _process_tce(tce)
+        try:
+          example = _process_tce(tce)
+        except ValueError:
+          logging.warning("Failure for %s, reverting to old detrending", tce.tic_id)
+          _process_tce(tce, True)
       except FileNotFoundError as e:
         logging.warning("%s: %s", process_name, e)
         num_skipped += 1
         continue
+      except:
+        logging.warning("Failing for %s", tce.tic_id)
+        raise
       writer.write(example.SerializeToString())
 
       num_processed += 1
