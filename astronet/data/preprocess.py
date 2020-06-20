@@ -56,8 +56,9 @@ def get_spline_mask(time, period, t0, tdur):
 def filter_outliers(time, flux):
   valid = ~np.isnan(flux)
   time, flux = time[valid], flux[valid]
-  inliers =  flux < (flux.mean() + 7 * flux.std())
-  return time[inliers], flux[inliers]
+  return time, flux
+#   inliers =  flux < (flux.mean() + 7 * flux.std())
+#   return time[inliers], flux[inliers]
 
 
 def detrend_and_filter(tic_id, time, flux, period, epoch, duration):
