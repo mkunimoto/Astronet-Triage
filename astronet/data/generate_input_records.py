@@ -242,7 +242,7 @@ def _process_file_shard(tce_table, file_name):
           example = _process_tce(tce)
         except ValueError:
           logging.warning("Failure for %s, reverting to old detrending", tce.tic_id)
-          _process_tce(tce, True)
+          example = _process_tce(tce, True)
       except FileNotFoundError as e:
         logging.warning("%s: %s", process_name, e)
         num_skipped += 1
