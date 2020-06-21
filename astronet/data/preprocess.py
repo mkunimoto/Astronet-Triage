@@ -96,7 +96,7 @@ def phase_fold_and_sort_light_curve(time, flux, period, t0):
 
 
 def generate_view(tic_id, time, flux, period, num_bins, bin_width, t_min, t_max,
-                  normalize=True):
+                  normalize=True, new_binning=True):
   """Generates a view of a phase-folded light curve using a median filter.
 
   Args:
@@ -113,7 +113,10 @@ def generate_view(tic_id, time, flux, period, num_bins, bin_width, t_min, t_max,
     uniformly spaced bins on the phase-folded time axis.
   """
   try:
-    view = median_filter2.new_binning(time, flux, period, num_bins)
+    if new_binning:
+      view = median_filter2.new_binning(time, flux, period, num_bins)
+    else:
+      view = median_filter.median_filter(time, flux, num_bins, bin_width, t_min, t_max)
   except:
     logging.warning("Robust mean failed for %s, using median", tic_id)
     view = median_filter.median_filter(time, flux, num_bins, bin_width, t_min, t_max)
@@ -129,7 +132,7 @@ def generate_view(tic_id, time, flux, period, num_bins, bin_width, t_min, t_max,
   return view
 
 
-def global_view(tic_id, time, flux, period, num_bins=201, bin_width_factor=1.2/201):
+def global_view(tic_id, time, flux, period, num_bins=201, bin_width_factor=1.2/201, new_binning=True):
   """Generates a 'global view' of a phase folded light curve.
 
   See Section 3.3 of Shallue & Vanderburg, 2018, The Astronomical Journal.
@@ -154,7 +157,8 @@ def global_view(tic_id, time, flux, period, num_bins=201, bin_width_factor=1.2/2
       num_bins=num_bins,
       bin_width=period * bin_width_factor,
       t_min=-period / 2,
-      t_max=period / 2)
+      t_max=period / 2,
+      new_binning=new_binning)
 
 
 def twice_global_view(time, flux, period, num_bins=402, bin_width_factor=1.2 / 402):
@@ -193,7 +197,8 @@ def local_view(tic_id,
                duration,
                num_bins=61,
                bin_width_factor=0.16,
-               num_durations=2):
+               num_durations=2,
+               new_binning=True):
   """Generates a 'local view' of a phase folded light curve.
   See Section 3.3 of Shallue & Vanderburg, 2018, The Astronomical Journal.
   http://iopscience.iop.org/article/10.3847/1538-3881/aa9e09/meta
@@ -218,7 +223,8 @@ def local_view(tic_id,
       num_bins=num_bins,
       bin_width=duration * bin_width_factor,
       t_min=max(-period / 2, -duration * num_durations),
-      t_max=min(period / 2, duration * num_durations))
+      t_max=min(period / 2, duration * num_durations),
+      new_binning=new_binning)
 
 
 def mask_transit(time, duration, period, mask_width=2, phase_limit=0.1):
