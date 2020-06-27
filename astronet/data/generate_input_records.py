@@ -240,15 +240,15 @@ def _process_file_shard(tce_table, file_name):
       try:
         try:
           example = _process_tce(tce)
-        except ValueError:
-          logging.warning("Spline filaed for %s, using KSPSAP", tce.tic_id)
+        except Exception as e:
+          if isinstance(e, FileNotFoundError):
+            logging.warning("%s: %s", process_name, e)
+            num_skipped += 1
+            continue            
+          logging.warning("Fallback to KSPSAP for %s", tce.tic_id)
           example = _process_tce(tce, True)
-      except FileNotFoundError as e:
-        logging.warning("%s: %s", process_name, e)
-        num_skipped += 1
-        continue
-      except:
-        logging.warning("Failing for %s", tce.tic_id)
+      except Exception as e:
+        logging.warning("Failing for %s: %s: %s", tce.tic_id, type(e), e)
         raise
       writer.write(example.SerializeToString())
 

@@ -148,12 +148,11 @@ def tmod(t, p, e):
 def get_overlap(min1, max1, min2, max2):
     return(max(0, min(max1, max2) - max(min1, min2)))
 
-def new_binning(time, flux, period, num_bins):
-  
-  #something something
+def new_binning(time, flux, period, num_bins, t_min, t_max):
   t = time.copy()
   
-  bins_left_edge, step = np.linspace(min(t), max(t), num=num_bins, endpoint=False, retstep=True)
+  bins_left_edge, step = np.linspace(
+      t_min, t_max, num=num_bins, endpoint=False, retstep=True)
 
   bin_width = step.copy()
   hbw = bin_width / 2

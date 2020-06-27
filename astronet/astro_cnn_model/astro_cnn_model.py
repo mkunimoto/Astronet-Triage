@@ -48,10 +48,40 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-from astronet.astro_model import astro_model
 
+class AstroCNNModel(tf.keras.Model):
 
-class AstroCNNModel(astro_model.AstroModel):
+  def __init__(self, config):
+    super(AstroCNNModel, self).__init__()
+
+    self.config = config
+    self.ts_blocks = self._create_ts_blocks(config)
+
+    self.final = [
+      tf.keras.layers.Concatenate()
+    ]
+
+    for i in range(config['hparams']['num_pre_logits_hidden_layers']):
+      self.final.append(
+          tf.keras.layers.Dense(
+              units=config['hparams']['pre_logits_hidden_layer_size'],
+              activation='relu'))
+      if config['hparams']['use_batch_norm']:
+        self.final.append(tf.keras.layers.BatchNormalization())
+      self.final.append(
+          tf.keras.layers.Dropout(
+              config['hparams']['pre_logits_dropout_rate']))
+
+    if config['hparams']['output_dim'] == 1:
+      self.final.append(
+          tf.keras.layers.Dense(
+              units=config['hparams']['output_dim'],
+              activation='sigmoid'))
+    else:
+      self.final.append(
+          tf.keras.layers.Dense(
+              units=config['hparams']['output_dim'],
+              activation='sigmoid'))
 
   def _create_conv_block(self, config, name):
     block_params = config['hparams']['time_series_hidden'][name]
@@ -77,15 +107,30 @@ class AstroCNNModel(astro_model.AstroModel):
     return layers
 
   def _create_ts_blocks(self, config):
-    blocks = {
-      'local_view': self._create_conv_block(config, 'local_view'),
-      'global_view': self._create_conv_block(config, 'global_view')
-    }
-    if 'secondary_view' in config.hparams.time_series_hidden:
-      blocks['secondary_view'] = self._create_conv_block(config, 'secondary_view')
+    blocks = {}
+    for key in config.hparams.time_series_hidden:
+      blocks[key] = self._create_conv_block(config, key)
 
     return blocks
 
-  def _create_aux_block(self, config):
-    return None
+  def _apply_block(self, block, input_, training):
+    y = input_
+    for layer in block:
+      y = layer(y, training=training)
+    return y
 
+  def call(self, inputs, training=None):
+    ts_inputs = {}
+    aux_inputs = {}
+    for k, v in inputs.items():
+        if k in self.config.hparams.time_series_hidden:
+            ts_inputs[k] = v
+        else:
+            aux_inputs[k] = v
+    y = [
+      self._apply_block(
+          self.ts_blocks[k], v, training) for k, v in ts_inputs.items()]
+    y.extend(aux_inputs.values())
+    y = self._apply_block(self.final, y, training)
+    
+    return y

@@ -332,3 +332,13 @@ def local_global_new_tuned():
      'use_batch_norm': False}
 
   return config
+
+
+
+def multiview():
+  config = local_global_new_tuned()
+
+  config['hparams']['time_series_hidden']['twice_local'] = config['hparams']['time_series_hidden']['local_view']
+  config['hparams']['time_series_hidden']['half_local'] = config['hparams']['time_series_hidden']['local_view']
+
+  return config

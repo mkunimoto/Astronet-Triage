@@ -114,7 +114,7 @@ def generate_view(tic_id, time, flux, period, num_bins, bin_width, t_min, t_max,
   """
   try:
     if new_binning:
-      view = median_filter2.new_binning(time, flux, period, num_bins)
+      view = median_filter2.new_binning(time, flux, period, num_bins, t_min, t_max)
     else:
       view = median_filter.median_filter(time, flux, num_bins, bin_width, t_min, t_max)
   except:

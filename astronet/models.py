@@ -20,7 +20,6 @@ from __future__ import print_function
 
 from astronet.astro_cnn_model import astro_cnn_model
 from astronet.astro_cnn_model import configurations as astro_cnn_configurations
-from astronet.astro_model import astro_model
 from astronet.util import configdict
 
 # Dictionary of model name to (model_class, configuration_module).
