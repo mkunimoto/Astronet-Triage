@@ -231,7 +231,7 @@ def _process_file_shard(tce_table, file_name):
   process_name = multiprocessing.current_process().name
   shard_name = os.path.basename(file_name)
   shard_size = len(tce_table)
-  logging.info("%s: Processing %d items in shard %s", process_name, shard_size, shard_name)
+  logging.info("%s: %d items", shard_name, shard_size)
 
   with tf.io.TFRecordWriter(file_name) as writer:
     num_processed = 0
@@ -244,23 +244,21 @@ def _process_file_shard(tce_table, file_name):
           if isinstance(e, FileNotFoundError):
             logging.warning("%s: %s", process_name, e)
             num_skipped += 1
-            continue            
-          logging.warning("Fallback to KSPSAP for %s", tce.tic_id)
-          example = _process_tce(tce, True)
+            continue
+          else:
+            logging.warning("Fallback to KSPSAP for %s", tce.tic_id)
+            example = _process_tce(tce, True)
       except Exception as e:
-        logging.warning("Failing for %s: %s: %s", tce.tic_id, type(e), e)
+        logging.warning("*** Failing %s: %s: %s", tce.tic_id, type(e), e)
         raise
       writer.write(example.SerializeToString())
 
       num_processed += 1
       if not num_processed % 100:
-        logging.info(
-            "%s: Processed %d/%d items in shard %s",
-            process_name, num_processed, shard_size, shard_name)
+        logging.info("%d/%d %s", num_processed, shard_size, shard_name)
 
   logging.info(
-      "%s: Wrote %d/%d items in shard %s. %d skipped.",
-      process_name, num_processed, shard_size,shard_name, num_skipped)
+      "%s: %d/%d written, %d skipped.", shard_name, num_processed, shard_size, num_skipped)
 
 
 def create_input_list():

@@ -257,6 +257,8 @@ def find_secondary(time, flux, duration, period, mask_width=2, phase_limit=0.1):
         mask_width = 1
 
     mask = mask_transit(time, duration, period, mask_width, phase_limit)
+    if not any(mask):
+        mask = mask_transit(time, duration, period, mask_width / 2, phase_limit)
 
     new_time = time[mask]
     new_flux = flux[mask]
