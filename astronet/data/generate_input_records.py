@@ -242,7 +242,7 @@ def _process_file_shard(tce_table, file_name):
           example = _process_tce(tce)
         except Exception as e:
           if isinstance(e, FileNotFoundError):
-            logging.warning("%s: %s", process_name, e)
+            logging.warning("%s", e)
             num_skipped += 1
             continue
           else:
