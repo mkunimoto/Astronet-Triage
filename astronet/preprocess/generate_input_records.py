@@ -87,7 +87,7 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
-from astronet.data import preprocess
+from astronet.preprocess import preprocess
 from light_curve_util.median_filter import SparseLightCurveError
 
 
@@ -108,18 +108,6 @@ parser.add_argument(
     help="Base folder containing TESS data.")
 
 parser.add_argument(
-    "--clean",
-    action='store_true',
-    default=False,
-    help="Exclude TCEs with S/N below some threshold? If True, must also supply a threshold (default 15).")
-
-parser.add_argument(
-    "--threshold",
-    type=float,
-    default=15,
-    help="Exclude TCEs with S/N below this threshold if --clean=True")
-
-parser.add_argument(
     "--output_dir",
     type=str,
     required=True,
@@ -137,16 +125,6 @@ parser.add_argument(
     default=5,
     help="Number of subprocesses for processing the TCEs in parallel.")
 
-parser.add_argument(
-    "--make_test_set",
-    action='store_true',
-    default=False,
-    help="Generate just a test set rather than the full train/val/test?")
-
-
-
-# Name and values of the column in the input CSV file to use as training labels.
-_LABEL_COLUMN = ["disp_J", "disp_E", "disp_N"]
 
 
 def _set_float_feature(ex, name, value):
@@ -169,19 +147,6 @@ def _set_int64_feature(ex, name, value):
 
 
 def _process_tce(tce, use_old_detrending=False):
-  """Processes the light curve for a Kepler TCE and returns an Example proto.
-
-  Args:
-    tce: Row of the input TCE table.
-
-  Returns:
-    A tensorflow.train.Example proto containing TCE features.
-
-  Raises:
-    IOError: If the light curve files for this Kepler ID cannot be found.
-  """
-  # Read and process the light curve.
-
   if use_old_detrending:
     time, flux = preprocess.read_and_process_light_curve(tce.tic_id, FLAGS.tess_data_dir, 'KSPSAP_FLUX')
   else:
@@ -189,7 +154,6 @@ def _process_tce(tce, use_old_detrending=False):
     time, flux = preprocess.detrend_and_filter(tce.tic_id, time, flux, tce.Period, tce.Epoc, tce.Duration)
   time, flux = preprocess.phase_fold_and_sort_light_curve(time, flux, tce.Period, tce.Epoc)
 
-  # Generate the local and global views.
   global_view = preprocess.global_view(tce.tic_id, time, flux, tce.Period)
   local_view = preprocess.local_view(tce.tic_id, time, flux, tce.Period, tce.Duration)
   secondary_view = preprocess.secondary_view(tce.tic_id, time, flux, tce.Period, tce.Duration)
@@ -200,15 +164,12 @@ def _process_tce(tce, use_old_detrending=False):
   if any(np.isnan(secondary_view)):
     raise ValueError("NaN in secondary view for {}".format(tce.tic_id))
 
-  # Make output proto.
   ex = tf.train.Example()
 
-  # Set time series features.
   _set_float_feature(ex, "global_view", global_view)
   _set_float_feature(ex, "local_view", local_view)
   _set_float_feature(ex, "secondary_view", secondary_view)
 
-  # Set other columns.
   for col_name, value in tce.items():
     if np.issubdtype(type(value), np.integer):
       _set_int64_feature(ex, col_name, [value])
@@ -222,12 +183,6 @@ def _process_tce(tce, use_old_detrending=False):
 
 
 def _process_file_shard(tce_table, file_name):
-  """Processes a single file shard.
-
-  Args:
-    tce_table: A Pandas DateFrame containing the TCEs in the shard.
-    file_name: The output TFRecord file.
-  """
   process_name = multiprocessing.current_process().name
   shard_name = os.path.basename(file_name)
   shard_size = len(tce_table)
@@ -261,43 +216,16 @@ def _process_file_shard(tce_table, file_name):
       "%s: %d/%d written, %d skipped.", shard_name, num_processed, shard_size, num_skipped)
 
 
-def create_input_list():
-    """Generate pandas dataframe of TCEs to be made into file shards.
-
-    :return: pandas dataframe containing TCEs. Required columns: TIC, TCE planet number, final disposition
-    """
-
-    tce_table = pd.read_csv(
-        FLAGS.input_tce_csv_file, header=0,
-        dtype={'Sectors': int, 'camera': int, 'ccd': int})
-
-    tce_table = tce_table[tce_table['Transit_Depth'] > 0]
-    tce_table["Duration"] /= 24  # Convert hours to days.
-    logging.info("Read TCE CSV file with %d rows.", len(tce_table))
-
-    num_tces = len(tce_table)
-    logging.info("Filtered to %d TCEs", num_tces)
-    
-    return tce_table
-
-
-def make_eval_set(argv):
-    del argv
-
-    # Make the output directory if it doesn't already exist.
+def main(_):
     tf.io.gfile.makedirs(FLAGS.output_dir)
 
-    tce_table = create_input_list()
-    if FLAGS.clean:
-        tce_table = tce_table[tce_table['SN'] >= FLAGS.threshold]
+    tce_table = pd.read_csv(
+        FLAGS.input_tce_csv_file,
+        header=0,
+        dtype={'tic_id': str})
 
     num_tces = len(tce_table)
-    logging.info('Read in %s TCEs', num_tces)
-
-    # Randomly shuffle the TCE table.
-    np.random.seed(123)
-    tce_table = tce_table.iloc[np.random.permutation(num_tces)]
-    logging.info("Randomly shuffled TCEs.")
+    logging.info("Read %d TCEs", num_tces)
 
     # Further split training TCEs into file shards.
     file_shards = []  # List of (tce_table_shard, file_name).
@@ -330,80 +258,7 @@ def make_eval_set(argv):
     logging.info("Finished processing %d total file shards", num_file_shards)
 
 
-def main(argv):
-  del argv  # Unused.
-
-  # Make the output directory if it doesn't already exist.
-  tf.gfile.MakeDirs(FLAGS.output_dir)
-
-  tce_table = create_input_list()
-  num_tces = len(tce_table)
-
-  # Randomly shuffle the TCE table.
-  np.random.seed(123)
-  tce_table = tce_table.iloc[np.random.permutation(num_tces)]
-  tf.logging.info("Randomly shuffled TCEs.")
-
-  # Partition the TCE table as follows:
-  #   train_tces = 80% of TCEs
-  #   val_tces = 10% of TCEs (for validation during training)
-  #   test_tces = 10% of TCEs (for final evaluation)
-
-  train_cutoff = int(0.80 * num_tces)
-  val_cutoff = int(0.90 * num_tces)
-  train_tces = tce_table[0:train_cutoff]
-  val_tces = tce_table[train_cutoff:val_cutoff]
-
-  if FLAGS.clean:
-      tf.logging.info("Excluding S/N < %s", FLAGS.threshold)
-      train_tces = train_tces[train_tces['SN'] >= FLAGS.threshold]
-      val_tces = val_tces[val_tces['SN'] >= FLAGS.threshold]
-  test_tces = tce_table[val_cutoff:]
-  logging.info(
-      "Partitioned %d TCEs into training (%d), validation (%d) and test (%d)",
-      num_tces, len(train_tces), len(val_tces), len(test_tces))
-
-  # Further split training TCEs into file shards.
-  file_shards = []  # List of (tce_table_shard, file_name).
-  boundaries = np.linspace(
-      0, len(train_tces), FLAGS.num_train_shards + 1).astype(np.int)
-  for i in range(FLAGS.num_train_shards):
-    start = boundaries[i]
-    end = boundaries[i + 1]
-    file_shards.append((train_tces[start:end], os.path.join(
-        FLAGS.output_dir, "train-%.5d-of-%.5d" % (i, FLAGS.num_train_shards))))
-
-  # Validation and test sets each have a single shard.
-  file_shards.append((val_tces, os.path.join(FLAGS.output_dir,
-                                             "val-00000-of-00001")))
-  file_shards.append((test_tces, os.path.join(FLAGS.output_dir,
-                                              "test-00000-of-00001")))
-  num_file_shards = len(file_shards)
-
-  # Launch subprocesses for the file shards.
-  num_processes = min(num_file_shards, FLAGS.num_worker_processes)
-  tf.logging.info("Launching %d subprocesses for %d total file shards",
-                  num_processes, num_file_shards)
-
-  pool = multiprocessing.Pool(processes=num_processes)
-  async_results = [
-      pool.apply_async(_process_file_shard, file_shard)
-      for file_shard in file_shards
-  ]
-  pool.close()
-
-  # Instead of pool.join(), we call async_result.get() to ensure any exceptions
-  # raised by the worker processes are also raised here.
-  for async_result in async_results:
-    async_result.get()
-
-  logging.info("Finished processing %d total file shards", num_file_shards)
-
-
 if __name__ == "__main__":
   logging.set_verbosity(logging.INFO)
   FLAGS, unparsed = parser.parse_known_args()
-  if FLAGS.make_test_set:
-    app.run(main=make_eval_set, argv=[sys.argv[0]] + unparsed)
-  else:
-    app.run(main=main, argv=[sys.argv[0]] + unparsed)
+  app.run(main=main, argv=[sys.argv[0]] + unparsed)

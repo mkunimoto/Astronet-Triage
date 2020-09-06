@@ -43,8 +43,6 @@ def tess_filenames(tic, base_dir):
     Returns:
       filename for given TIC.
     """
-    tic = str(tic)
-
     timestr = 2019247000000
     scid = "111"
     fitsfile = "tess%s-%.16d-%s-cr_llc.fits.gz" % (timestr, int(tic), scid)

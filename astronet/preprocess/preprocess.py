@@ -35,11 +35,6 @@ from light_curve_util import tess_io
 from statsmodels.robust import scale
 
 
-class EmptyLightCurveError(Exception):
-    """Indicates light curve with no points in chosen time range."""
-    pass
-
-
 def read_and_process_light_curve(tic, tess_data_dir, flux_key='KSPSAP_FLUX'):
   file_names = tess_io.tess_filenames(tic, tess_data_dir)
   assert file_names
@@ -57,8 +52,6 @@ def filter_outliers(time, flux):
   valid = ~np.isnan(flux)
   time, flux = time[valid], flux[valid]
   return time, flux
-#   inliers =  flux < (flux.mean() + 7 * flux.std())
-#   return time[inliers], flux[inliers]
 
 
 def detrend_and_filter(tic_id, time, flux, period, epoch, duration):
@@ -228,16 +221,7 @@ def local_view(tic_id,
 
 
 def mask_transit(time, duration, period, mask_width=2, phase_limit=0.1):
-    """
-
-    :param time: 1D array of time values, folded and sorted in ascending order, with the transit located at time 0.
-    :param duration: The duration of the event (in days).
-    :param period: the period of the event (in days).
-    :param mask_width: number of durations to mask out.
-    :param phase_limit: minimum phase to search for secondary eclipse.
-    :return: mask: 1D array of booleans
-    """
-    mask = [(abs(t) > duration*mask_width/2) and (abs(t) > period*phase_limit) for t in time]
+    mask = [(abs(t) > duration * mask_width / 2) and (abs(t) > period * phase_limit) for t in time]
     return np.array(mask)
 
 
@@ -302,13 +286,13 @@ def find_secondary(time, flux, duration, period, mask_width=2, phase_limit=0.1):
 
 def secondary_view(tic_id, 
                    time,
-               flux,
-               period,
-               duration,
-               num_bins=61,
-               bin_width_factor=0.16,
-               num_durations=4
-               ):
+                   flux,
+                   period,
+                   duration,
+                   num_bins=61,
+                   bin_width_factor=0.16,
+                   num_durations=4
+                  ):
     """Generates a 'local view' of a phase folded light curve, centered on phase 0.5.
       See Section 3.3 of Shallue & Vanderburg, 2018, The Astronomical Journal.
       http://iopscience.iop.org/article/10.3847/1538-3881/aa9e09/meta
@@ -325,8 +309,9 @@ def secondary_view(tic_id,
         1D NumPy array of size num_bins containing the median flux values of
         uniformly spaced bins on the phase-folded time axis.
       """
-
+    
     t0, new_time, new_flux = find_secondary(time, flux, duration, period)
+    
     t_min = max(t0 - period / 2, t0 - duration * num_durations, new_time[0])
     t_max = min(t0 + period / 2, t0 + duration * num_durations, new_time[-1])
 
