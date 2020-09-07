@@ -229,14 +229,6 @@ def local_global_new():
 
   config["hparams"]["output_dim"] = 5
 
-  config["inputs"]["features"]["Epoc"] = {
-      "is_time_series": False,
-      "mean": 1496.751505,
-      "std": 154.114326,
-      "length": 1,
-      "has_nans": False,
-  }
-
   config["inputs"]["features"]["Period"] = {
       "is_time_series": False,
       "mean": 8.071377,

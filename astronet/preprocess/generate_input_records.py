@@ -166,18 +166,15 @@ def _process_tce(tce, use_old_detrending=False):
 
   ex = tf.train.Example()
 
-  _set_float_feature(ex, "global_view", global_view)
-  _set_float_feature(ex, "local_view", local_view)
-  _set_float_feature(ex, "secondary_view", secondary_view)
-
+  _set_float_feature(ex, 'global_view', global_view)
+  _set_float_feature(ex, 'local_view', local_view)
+  _set_float_feature(ex, 'secondary_view', secondary_view)
+    
   for col_name, value in tce.items():
-    if np.issubdtype(type(value), np.integer):
-      _set_int64_feature(ex, col_name, [value])
+    if col_name in ('tic_id', 'Epoc', 'Sectors') or col_name.startswith('disp_'):
+        _set_int64_feature(ex, col_name, [int(value)])
     else:
-      try:
         _set_float_feature(ex, col_name, [float(value)])
-      except ValueError:
-        _set_bytes_feature(ex, col_name, [value])
 
   return ex
 

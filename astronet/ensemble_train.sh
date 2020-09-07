@@ -6,9 +6,9 @@ do
     python astronet/train.py \
         --model=AstroCNNModel \
         --config_name=local_global_new_tuned \
-        --train_files='/mnt/tess/astronet/tfrecords-12/test-0000[0-5]*' \
-        --eval_files='/mnt/tess/astronet/tfrecords-12/test-0000[6-6]*' \
+        --train_files='/mnt/tess/astronet/tfrecords-13/test-0000[0-5]*' \
+        --eval_files='/mnt/tess/astronet/tfrecords-13/test-0000[6-6]*' \
         --train_steps=20000 \
-        --model_dir="/mnt/tess/astronet/checkpoints/local_global_new_12/${i}"
+        --model_dir="/mnt/tess/astronet/checkpoints/local_global_new_13/${i}"
 done
 
