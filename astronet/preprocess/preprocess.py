@@ -45,7 +45,7 @@ def read_and_process_light_curve(tic, tess_data_dir, flux_key='KSPSAP_FLUX'):
 
 def get_spline_mask(time, period, t0, tdur):
   phase = util.phase_fold_time(time, period, t0)
-  outtran = (np.abs(phase) > tdur)
+  outtran = (np.abs(phase) > tdur / 2)
   return outtran
 
 def filter_outliers(time, flux):

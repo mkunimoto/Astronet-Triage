@@ -429,48 +429,26 @@ def fit_kepler_spline(all_time,
 
 
 def choosekeplersplinev2(time,flux, bkspace_min=0.5, bkspace_max=20, bkspace_num=20, 
-                         maxiter=5, verbose=True, input_mask=None, gap_width_in = None, return_metadata=False):
-    if gap_width_in == None: gap_width_in = bkspace_min #If not specified use the same as the input bkspace
-    if np.all(input_mask == None): input_mask = np.ones(len(time), dtype=bool)    
+                         maxiter=5, verbose=False, input_mask=None, gap_width_in=None,
+                         return_metadata=False):
+    if gap_width_in == None:
+        gap_width_in = bkspace_min
+    if np.all(input_mask == None):
+        input_mask = np.ones(len(time), dtype=bool)
+
     all_time, all_flux = split(time, flux, gap_width=gap_width_in) 
     all_time2, all_input_mask = split(time, input_mask, gap_width=gap_width_in) 
     
     bkspaces = np.logspace(
       np.log10(bkspace_min), np.log10(bkspace_max), num=bkspace_num)
     
-    spline, metadata = choose_kepler_spline(all_time, all_flux, verbose=False, 
-                                            bkspaces =bkspaces, all_input_mask=all_input_mask)
-    #print(len(spline))
+    spline, metadata = choose_kepler_spline(all_time, all_flux, verbose=verbose, 
+                                            bkspaces=bkspaces, all_input_mask=all_input_mask)
     spline = np.concatenate(spline)
     
     metadata.light_curve_mask = np.concatenate(metadata.light_curve_mask)
-    metadata.input_light_curve_mask = np.concatenate(metadata.input_light_curve_mask) # replace this line with input mask
+    metadata.input_light_curve_mask = np.concatenate(metadata.input_light_curve_mask)
     
-    if return_metadata: return spline, metadata
-    else: return spline
-
-
-def keplersplinev2(time,flux, bkspace=1.5, maxiter=5, verbose=True, input_mask=None, gap_width_in = None, return_metadata=False):
-    if gap_width_in == None: gap_width_in = bkspace #If not specified use the same as the input bkspace
-    if np.all(input_mask == None): input_mask = np.ones(len(time), dtype=bool)    
-    all_time, all_flux = split(time, flux, gap_width=gap_width_in) 
-    all_time2, all_input_mask = split(time, input_mask, gap_width=gap_width_in) 
-    
-    spline, metadata = choose_kepler_spline(all_time, all_flux, verbose=False, 
-                                            bkspaces =[bkspace], all_input_mask=all_input_mask)
-    #print(len(spline))
-    spline = np.concatenate(spline)
-    
-    metadata.light_curve_mask = np.concatenate(metadata.light_curve_mask)
-    metadata.input_light_curve_mask = np.concatenate(metadata.input_light_curve_mask) # replace this line with input mask
-    
-    if return_metadata: return spline, metadata
-    else: return spline
-
-
-
-    
-    
-    
-    
-    
+    if return_metadata:
+        return spline, metadata
+    return spline
