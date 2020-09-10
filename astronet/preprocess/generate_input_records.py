@@ -232,7 +232,7 @@ def main(_):
       start = boundaries[i]
       end = boundaries[i + 1]
       file_shards.append((tce_table[start:end], os.path.join(
-          FLAGS.output_dir, "test-%.5d-of-%.5d" % (i, FLAGS.num_shards))))
+          FLAGS.output_dir, "%.5d-of-%.5d" % (i, FLAGS.num_shards))))
 
     # Launch subprocesses for the file shards.
     num_file_shards = len(file_shards)
