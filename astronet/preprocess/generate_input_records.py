@@ -114,9 +114,9 @@ parser.add_argument(
     help="Directory in which to save the output.")
 
 parser.add_argument(
-    "--num_train_shards",
+    "--num_shards",
     type=int,
-    default=8,
+    default=10,
     help="Number of file shards to divide the training set into.")
 
 parser.add_argument(
@@ -227,12 +227,12 @@ def main(_):
     # Further split training TCEs into file shards.
     file_shards = []  # List of (tce_table_shard, file_name).
     boundaries = np.linspace(
-        0, len(tce_table), FLAGS.num_train_shards + 1).astype(np.int)
-    for i in range(FLAGS.num_train_shards):
+        0, len(tce_table), FLAGS.num_shards + 1).astype(np.int)
+    for i in range(FLAGS.num_shards):
       start = boundaries[i]
       end = boundaries[i + 1]
       file_shards.append((tce_table[start:end], os.path.join(
-          FLAGS.output_dir, "test-%.5d-of-%.5d" % (i, FLAGS.num_train_shards))))
+          FLAGS.output_dir, "test-%.5d-of-%.5d" % (i, FLAGS.num_shards))))
 
     # Launch subprocesses for the file shards.
     num_file_shards = len(file_shards)
