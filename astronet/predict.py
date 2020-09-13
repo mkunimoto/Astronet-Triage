@@ -58,14 +58,11 @@ def predict():
 
     ds = input_ds.build_dataset(
         file_pattern=FLAGS.data_files,
-        input_config=config['inputs'],
+        input_config=config.inputs,
         batch_size=1,
         include_labels=False,
-        reverse_time_series_prob=0,
         shuffle_filenames=False,
         repeat=1,
-        use_tpu=False,
-        one_hot_labels=(config['hparams']['output_dim'] > 1),
         include_identifiers=True)
     
     if config.hparams.output_dim > 1:
@@ -84,8 +81,7 @@ def predict():
       preds = model(features)
 
       row = {}
-      for k, v in identifiers.items():
-        row[k] = v.numpy().item()
+      row['tic_id'] = identifiers.numpy().item()
       for i, p in enumerate(preds.numpy()[0]):
         row[label_index[i]] = p
 
