@@ -28,7 +28,7 @@ from absl import logging
 import tensorflow as tf
 
 from astronet import models
-from astronet.ops import dataset_ops
+from astronet.astro_cnn_model import input_ds
 from astronet.util import config_util
 
 parser = argparse.ArgumentParser()
@@ -89,7 +89,7 @@ def train(model, config):
         datetime.datetime.now().strftime('%Y%m%d_%H%M%S'))
     config_util.log_and_save_config(config, dir_name)
 
-  ds = dataset_ops.build_dataset(
+  ds = input_ds.build_dataset(
       file_pattern=FLAGS.train_files,
       input_config=config['inputs'],
       batch_size=config['hparams']['batch_size'],
@@ -102,7 +102,7 @@ def train(model, config):
       one_hot_labels=(config['hparams']['output_dim'] > 1))
 
   if FLAGS.eval_files:
-    eval_ds = dataset_ops.build_dataset(
+    eval_ds = input_ds.build_dataset(
         file_pattern=FLAGS.eval_files,
         input_config=config['inputs'],
         batch_size=config['hparams']['batch_size'],
@@ -171,8 +171,6 @@ def main(_):
   model = model_class(config)
     
   train(model, config)
-    
-  # TODO: Add TB callback
 
 
 if __name__ == "__main__":

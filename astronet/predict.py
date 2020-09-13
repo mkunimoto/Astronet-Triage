@@ -26,7 +26,7 @@ import numpy as np
 import tensorflow as tf
 import pandas as pd
 
-from astronet.ops import dataset_ops
+from astronet.astro_cnn_model import input_ds
 from astronet.util import config_util
 
 
@@ -56,7 +56,7 @@ def predict():
     model = tf.saved_model.load(FLAGS.model_dir)
     config = config_util.load_config(FLAGS.model_dir)
 
-    ds = dataset_ops.build_dataset(
+    ds = input_ds.build_dataset(
         file_pattern=FLAGS.data_files,
         input_config=config['inputs'],
         batch_size=1,
