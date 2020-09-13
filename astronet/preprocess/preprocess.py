@@ -45,12 +45,12 @@ def read_and_process_light_curve(tic, tess_data_dir, flux_key='KSPSAP_FLUX'):
 
 def get_spline_mask(time, period, t0, tdur):
   phase = util.phase_fold_time(time, period, t0)
-  outtran = (np.abs(phase) > tdur / 2)
+  outtran = (np.abs(phase) > (tdur / 2))
   return outtran
 
-def filter_outliers(time, flux):
+def filter_outliers(time, flux, mask):
   valid = ~np.isnan(flux)
-  time, flux = time[valid], flux[valid]
+  return time[valid], flux[valid], mask[valid]
   return time, flux
 
 
@@ -58,7 +58,7 @@ def detrend_and_filter(tic_id, time, flux, period, epoch, duration):
   input_mask = get_spline_mask(time, period, epoch, duration)
   spline_flux = keplersplinev2.choosekeplersplinev2(time, flux, input_mask=input_mask)
   detrended_flux = flux / spline_flux
-  return filter_outliers(time, detrended_flux)
+  return filter_outliers(time, detrended_flux, input_mask)
 
 
 def phase_fold_and_sort_light_curve(time, flux, period, t0):

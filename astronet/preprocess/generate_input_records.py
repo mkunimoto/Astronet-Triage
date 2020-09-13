@@ -151,7 +151,7 @@ def _process_tce(tce, use_old_detrending=False):
     time, flux = preprocess.read_and_process_light_curve(tce.tic_id, FLAGS.tess_data_dir, 'KSPSAP_FLUX')
   else:
     time, flux = preprocess.read_and_process_light_curve(tce.tic_id, FLAGS.tess_data_dir, 'SAP_FLUX')
-    time, flux = preprocess.detrend_and_filter(tce.tic_id, time, flux, tce.Period, tce.Epoc, tce.Duration)
+    time, flux, _ = preprocess.detrend_and_filter(tce.tic_id, time, flux, tce.Period, tce.Epoc, tce.Duration)
   time, flux = preprocess.phase_fold_and_sort_light_curve(time, flux, tce.Period, tce.Epoc)
 
   global_view = preprocess.global_view(tce.tic_id, time, flux, tce.Period)
