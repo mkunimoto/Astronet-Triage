@@ -65,15 +65,9 @@ def predict():
         repeat=1,
         include_identifiers=True)
     
-    if config.hparams.output_dim > 1:
-      if config.inputs.labels_are_columns:
-        label_index = {i:k for i, k in enumerate(config.inputs.label_columns)}
-      else:
-        label_index = {v:k for k, v in config.inputs.label_map.items()}
-    else:
-      print('Binary prediction threshold: {} (orientative)'.format(
-              config.hparams.prediction_threshold))
-      label_index = {0: 'PC_prob'}
+    label_index = {i:k for i, k in enumerate(config.inputs.label_columns)}
+    print('Binary prediction threshold: {} (orientative)'.format(
+        config.hparams.prediction_threshold))
 
     print('0 records', end='')
     series = []
