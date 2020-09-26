@@ -18,8 +18,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import os.path
 import h5py
+import glob
+import os
+
 import numpy as np
 import astropy 
 from astropy.io import fits
@@ -43,10 +45,11 @@ def tess_filenames(tic, base_dir):
     Returns:
       filename for given TIC.
     """
-    timestr = 2019247000000
-    scid = "111"
-    fitsfile = "tess%s-%.16d-%s-cr_llc.fits.gz" % (timestr, int(tic), scid)
-    filename = os.path.join(base_dir, fitsfile) 
+    fitsfile = "tess*-*-%.16d-*-cr_llc.fits.gz" % int(tic)
+    file_names = glob.glob(os.path.join(base_dir, fitsfile))
+    if len(file_names) != 1:
+        raise ValueError(f'found {len(file_names)} files for {tic}: {file_names}')
+    filename, = file_names
 
     return filename
 
