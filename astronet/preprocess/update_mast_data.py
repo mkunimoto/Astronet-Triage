@@ -12,10 +12,11 @@ def update_ext_mast_data(tces):
             print(' skiped')
             continue
         catalog_data = mast.Catalogs.query_object(
-            f'TIC {tic}', catalog="TIC", radius='1s')
+            f'TIC {tic}', catalog="TIC", radius='0.1s')
         print(' loaded')
+        assert len(catalog_data) == 1, catalog_data
         addl_data.append({'tic_id': tic, 'objType': catalog_data['objType'].item()})
-        if len(addl_data) % 50 == 0:
+        if len(addl_data) % 20 == 0:
             print(f'Updated {len(addl_data)} records')
             ext_table = ext_table.append(pd.DataFrame(addl_data).set_index('tic_id'))
             ext_table.to_csv(ext_data_file)
