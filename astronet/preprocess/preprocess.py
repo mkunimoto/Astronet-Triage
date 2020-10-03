@@ -44,7 +44,7 @@ def read_and_process_light_curve(tic, tess_data_dir, flux_key='KSPSAP_FLUX'):
 
 
 def get_spline_mask(time, period, t0, tdur):
-  phase = util.phase_fold_time(time, period, t0)
+  phase, _ = util.phase_fold_time(time, period, t0)
   outtran = (np.abs(phase) > (tdur / 2))
   return outtran
 
@@ -77,17 +77,15 @@ def phase_fold_and_sort_light_curve(time, flux, period, t0):
     folded_flux: 1D NumPy array. Values are the same as the original input
         array, but sorted by folded_time.
   """
-  n_folds = (max(time) - min(time)) / period
-
   # Phase fold time.
-  time = util.phase_fold_time(time, period, t0)
+  time, fold_num = util.phase_fold_time(time, period, t0)
 
   # Sort by ascending time.
   sorted_i = np.argsort(time)
   time = time[sorted_i]
   flux = flux[sorted_i]
 
-  return time, flux, n_folds
+  return time, flux, max(fold_num)
 
 
 def generate_view(tic_id, time, flux, period, num_bins, bin_width, t_min, t_max,

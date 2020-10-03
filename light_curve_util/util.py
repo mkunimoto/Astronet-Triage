@@ -37,10 +37,11 @@ def phase_fold_time(time, period, t0):
     A 1D numpy array.
   """
   half_period = period / 2
-  result = np.mod(time + (half_period - t0), period)
+  shifted_time = time - t0 + half_period
+  fold_num, result = np.divmod(shifted_time, period)
   result -= half_period
-  return result
-
+  return result, fold_num
+    
 
 def split(all_time, all_flux, gap_width=0.75):
   """Splits a light curve on discontinuities (gaps).
