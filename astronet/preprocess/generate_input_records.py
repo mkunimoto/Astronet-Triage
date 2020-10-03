@@ -152,7 +152,7 @@ def _process_tce(tce, use_old_detrending=False):
   else:
     time, flux = preprocess.read_and_process_light_curve(tce.tic_id, FLAGS.tess_data_dir, 'SAP_FLUX')
     time, flux, _ = preprocess.detrend_and_filter(tce.tic_id, time, flux, tce.Period, tce.Epoc, tce.Duration)
-  time, flux = preprocess.phase_fold_and_sort_light_curve(time, flux, tce.Period, tce.Epoc)
+  time, flux, n_folds = preprocess.phase_fold_and_sort_light_curve(time, flux, tce.Period, tce.Epoc)
 
   global_view = preprocess.global_view(tce.tic_id, time, flux, tce.Period)
   local_view = preprocess.local_view(tce.tic_id, time, flux, tce.Period, tce.Duration)
@@ -169,6 +169,7 @@ def _process_tce(tce, use_old_detrending=False):
   _set_float_feature(ex, 'global_view', global_view)
   _set_float_feature(ex, 'local_view', local_view)
   _set_float_feature(ex, 'secondary_view', secondary_view)
+  _set_float_feature(ex, 'n_folds', [n_folds])
     
   for col_name, value in tce.items():
     if col_name in ('tic_id', 'Epoc', 'Sectors') or col_name.startswith('disp_'):

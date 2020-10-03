@@ -77,6 +77,8 @@ def phase_fold_and_sort_light_curve(time, flux, period, t0):
     folded_flux: 1D NumPy array. Values are the same as the original input
         array, but sorted by folded_time.
   """
+  n_folds = (max(time) - min(time)) / period
+
   # Phase fold time.
   time = util.phase_fold_time(time, period, t0)
 
@@ -85,7 +87,7 @@ def phase_fold_and_sort_light_curve(time, flux, period, t0):
   time = time[sorted_i]
   flux = flux[sorted_i]
 
-  return time, flux
+  return time, flux, n_folds
 
 
 def generate_view(tic_id, time, flux, period, num_bins, bin_width, t_min, t_max,
@@ -152,35 +154,6 @@ def global_view(tic_id, time, flux, period, num_bins=201, bin_width_factor=1.2/2
       t_min=-period / 2,
       t_max=period / 2,
       new_binning=new_binning)
-
-
-def twice_global_view(time, flux, period, num_bins=402, bin_width_factor=1.2 / 402):
-  """Generates a 'global view' of a phase folded light curve at 2x the BLS period.
-
-  See Section 3.3 of Shallue & Vanderburg, 2018, The Astronomical Journal.
-  http://iopscience.iop.org/article/10.3847/1538-3881/aa9e09/meta
-  If single transit, this is pretty much identical to global_view.
-
-  Args:
-    time: 1D array of time values, sorted in ascending order, phase-folded at 2x period.
-    flux: 1D array of flux values.
-    period: The period of the event (in days).
-    num_bins: The number of intervals to divide the time axis into.
-    bin_width_factor: Width of the bins, as a fraction of period.
-
-  Returns:
-    1D NumPy array of size num_bins containing the median flux values of
-    uniformly spaced bins on the phase-folded time axis.
-  """
-  return generate_view(
-      tic_id, 
-      time,
-      flux,
-      period,
-      num_bins=num_bins,
-      bin_width=period * bin_width_factor,
-      t_min=-period,
-      t_max=period)
 
 
 def local_view(tic_id, 
