@@ -85,7 +85,7 @@ def phase_fold_and_sort_light_curve(time, flux, period, t0):
   time = time[sorted_i]
   flux = flux[sorted_i]
 
-  return time, flux, max(fold_num)
+  return time, flux, fold_num
 
 
 def generate_view(tic_id, time, flux, period, num_bins, bin_width, t_min, t_max,
