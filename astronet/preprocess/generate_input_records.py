@@ -170,6 +170,7 @@ def _process_tce(tce, use_old_detrending=False):
   _set_float_feature(ex, 'local_view', local_view)
   _set_float_feature(ex, 'secondary_view', secondary_view)
   _set_float_feature(ex, 'n_folds', [max(fold_num)])
+  _set_float_feature(ex, 'n_points', [len(fold_num)])
     
   for col_name, value in tce.items():
     if col_name in ('tic_id', 'Epoc', 'Sectors') or col_name.startswith('disp_'):

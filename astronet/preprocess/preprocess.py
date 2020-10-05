@@ -88,6 +88,22 @@ def phase_fold_and_sort_light_curve(time, flux, period, t0):
   return time, flux, fold_num
 
 
+def select_transits(time, flux, fold_num, period, num_transits=10):
+    n_folds = max(fold_num) + 1
+    fold_size = [np.count_nonzero(fold_num == i) for i in range(n_folds)]
+    # Add a small amount of noise to break ties between equally sized folds.
+    sort_indicator = [fs + np.random_uniform(0.5) for fs in fold_size]
+    sorted_fold_num = np.flip(np.argsort(sort_indicator))
+    fold_nums = sorted_fold_num[:num_transits]
+
+    times = []
+    fluxes = []
+    for i in fold_nums:
+        times.append(time[fold_num == i])
+        fluxes.append(flux[fold_num == i])
+    return times, fluxes, fold_nums
+
+
 def generate_view(tic_id, time, flux, period, num_bins, bin_width, t_min, t_max,
                   normalize=True, new_binning=True):
   """Generates a view of a phase-folded light curve using a median filter.
