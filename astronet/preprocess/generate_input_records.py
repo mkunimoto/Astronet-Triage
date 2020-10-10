@@ -146,12 +146,13 @@ def _set_int64_feature(ex, name, value):
   ex.features.feature[name].int64_list.value.extend([int(v) for v in value])
 
 
-def _process_tce(tce, use_old_detrending=False):
+def _process_tce(tce, use_old_detrending=False, bkspace_min=0.5):
   if use_old_detrending:
     time, flux = preprocess.read_and_process_light_curve(tce.tic_id, FLAGS.tess_data_dir, 'KSPSAP_FLUX')
   else:
     time, flux = preprocess.read_and_process_light_curve(tce.tic_id, FLAGS.tess_data_dir, 'SAP_FLUX')
-    time, flux, _ = preprocess.detrend_and_filter(tce.tic_id, time, flux, tce.Period, tce.Epoc, tce.Duration)
+    time, flux, _ = preprocess.detrend_and_filter(
+        tce.tic_id, time, flux, tce.Period, tce.Epoc, tce.Duration, bkspace_min)
   time, flux, fold_num = preprocess.phase_fold_and_sort_light_curve(time, flux, tce.Period, tce.Epoc)
 
   global_view = preprocess.global_view(tce.tic_id, time, flux, tce.Period)
