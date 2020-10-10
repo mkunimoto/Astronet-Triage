@@ -85,6 +85,7 @@ def phase_fold_and_sort_light_curve(time, flux, period, t0):
   sorted_i = np.argsort(time)
   time = time[sorted_i]
   flux = flux[sorted_i]
+  fold_num = fold_num[sorted_i]
 
   return time, flux, fold_num
 
@@ -93,7 +94,7 @@ def select_transits(time, flux, fold_num, period, num_transits=10):
     n_folds = max(fold_num) + 1
     fold_size = [np.count_nonzero(fold_num == i) for i in range(n_folds)]
     # Add a small amount of noise to break ties between equally sized folds.
-    sort_indicator = [fs + np.random_uniform(0.5) for fs in fold_size]
+    sort_indicator = [fs + np.random.uniform(0.5) for fs in fold_size]
     sorted_fold_num = np.flip(np.argsort(sort_indicator))
     fold_nums = sorted_fold_num[:num_transits]
 

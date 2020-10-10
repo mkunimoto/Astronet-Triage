@@ -38,7 +38,15 @@ def phase_fold_time(time, period, t0):
   """
   half_period = period / 2
   shifted_time = time - t0 + half_period
+
+  # Normalize the time scale to begin as close to zero as possible.
+  while not any (shifted_time < period):
+        shifted_time -= period
+  while any(shifted_time < 0):
+        shifted_time += period
+
   fold_num, result = np.divmod(shifted_time, period)
+  fold_num = fold_num.astype(int)
   result -= half_period
   return result, fold_num
     
