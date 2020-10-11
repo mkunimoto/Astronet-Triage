@@ -153,9 +153,12 @@ def _set_int64_feature(ex, name, value):
 def _process_tce(tce, bkspace=None):
   orig_time, orig_flux = preprocess.read_and_process_light_curve(
       tce.tic_id, FLAGS.tess_data_dir, 'SAP_FLUX')
-  time, flux, _ = preprocess.detrend_and_filter(
+  ex = tf.train.Example()
+
+  detrended_time, detrended_flux, _ = preprocess.detrend_and_filter(
       tce.tic_id, orig_time, orig_flux, tce.Period, tce.Epoc, tce.Duration, bkspace)
-  time, flux, fold_num = preprocess.phase_fold_and_sort_light_curve(time, flux, tce.Period, tce.Epoc)
+  time, flux, fold_num = preprocess.phase_fold_and_sort_light_curve(
+      detrended_time, detrended_flux, tce.Period, tce.Epoc)
 
   # TODO: Include the mask in the data.
   global_view, _, _ = preprocess.global_view(tce.tic_id, time, flux, tce.Period)
@@ -163,8 +166,6 @@ def _process_tce(tce, bkspace=None):
   secondary_view, _, _ = preprocess.secondary_view(tce.tic_id, time, flux, tce.Period, tce.Duration)
   sample_segments_view = preprocess.sample_segments_view(tce.tic_id, time, flux, fold_num, tce.Period)
     
-  ex = tf.train.Example()
-
   _set_float_feature(ex, tce, 'global_view', global_view)
   _set_float_feature(ex, tce, 'local_view', local_view)
   _set_float_feature(ex, tce, 'secondary_view', secondary_view)
@@ -172,6 +173,16 @@ def _process_tce(tce, bkspace=None):
   _set_float_feature(ex, tce, 'n_folds', [max(fold_num)])
   _set_float_feature(ex, tce, 'n_points', [len(fold_num)])
     
+  time, flux, fold_num = preprocess.phase_fold_and_sort_light_curve(
+      detrended_time, detrended_flux, tce.Period * 2, tce.Epoc - tce.Period / 2)
+  global_view, _, _ = preprocess.global_view(tce.tic_id, time, flux, tce.Period * 2)
+  _set_float_feature(ex, tce, 'global_view_double_period', global_view)
+
+  time, flux, fold_num = preprocess.phase_fold_and_sort_light_curve(
+      detrended_time, detrended_flux, tce.Period / 2, tce.Epoc)
+  global_view, _, _ = preprocess.global_view(tce.tic_id, time, flux, tce.Period / 2)
+  _set_float_feature(ex, tce, 'global_view_half_period', global_view)
+
   for bkspace_f in [0.3, 0.7, 1.5, 5.0]:
     time, flux, _ = preprocess.detrend_and_filter(
         tce.tic_id, orig_time, orig_flux, tce.Period, tce.Epoc, tce.Duration, bkspace_f)
