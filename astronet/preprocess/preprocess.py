@@ -90,24 +90,17 @@ def phase_fold_and_sort_light_curve(time, flux, period, t0):
   return time, flux, fold_num
 
 
-def select_transits(time, flux, fold_num, period, num_transits=10):
-    n_folds = max(fold_num) + 1
-    fold_size = [np.count_nonzero(fold_num == i) for i in range(n_folds)]
-    # Add a small amount of noise to break ties between equally sized folds.
-    sort_indicator = [fs + np.random.uniform(0.5) for fs in fold_size]
-    sorted_fold_num = np.flip(np.argsort(sort_indicator))
-    fold_nums = sorted_fold_num[:num_transits]
-
-    times = []
-    fluxes = []
-    for i in fold_nums:
-        times.append(time[fold_num == i])
-        fluxes.append(flux[fold_num == i])
-    return times, fluxes, fold_nums
-
-
-def generate_view(tic_id, time, flux, period, num_bins, bin_width, t_min, t_max,
-                  normalize=True, new_binning=True):
+def generate_view(tic_id,
+                  time,
+                  flux,
+                  period,
+                  num_bins,
+                  bin_width,
+                  t_min,
+                  t_max,
+                  normalize=True,
+                  new_binning=True,
+                 ):
   """Generates a view of a phase-folded light curve using a median filter.
 
   Args:
@@ -125,22 +118,24 @@ def generate_view(tic_id, time, flux, period, num_bins, bin_width, t_min, t_max,
   """
   try:
     if new_binning:
-      view = median_filter2.new_binning(time, flux, period, num_bins, t_min, t_max)
+      view, mask = median_filter2.new_binning(time, flux, period, num_bins, t_min, t_max)
     else:
       view = median_filter.median_filter(time, flux, num_bins, bin_width, t_min, t_max)
+      mask = np.ones_like(view)
   except:
     logging.warning("Robust mean failed for %s, using median", tic_id)
     view = median_filter.median_filter(time, flux, num_bins, bin_width, t_min, t_max)
+    mask = np.ones_like(view)
 
   if normalize:
-    view -= np.median(view)
-    scale = np.abs(np.min(view))
-    # In pathological cases, min(view) is zero...
-    scale = np.where(scale != 0, scale, np.ones_like(scale))
-    view /= scale
-    
+    bool_mask = mask > 0
+    view = np.where(bool_mask, view - np.min(view[bool_mask]), view)
+    scale = np.abs(np.max(view) / 2)
+    if scale > 0:
+        view /= scale
+    view -= 1.0
 
-  return view
+  return view, mask
 
 
 def global_view(tic_id, time, flux, period, num_bins=201, bin_width_factor=1.2/201, new_binning=True):
@@ -311,7 +306,7 @@ def secondary_view(tic_id,
 
     return generate_view(
         tic_id, 
-      new_time,
+        new_time,
         new_flux,
         period,
         num_bins=num_bins,
@@ -320,3 +315,50 @@ def secondary_view(tic_id,
         t_max=t_max
     )
 
+
+def sample_transits(time, flux, fold_num, period, num_transits=10):
+    n_folds = max(fold_num) + 1
+    fold_size = [np.count_nonzero(fold_num == i) for i in range(n_folds)]
+    # Add a small amount of noise to break ties between equally sized folds.
+    sort_indicator = [fs + np.random.uniform(0.5) for fs in fold_size]
+    sorted_fold_num = np.flip(np.argsort(sort_indicator))
+    fold_nums = sorted_fold_num[:num_transits]
+
+    times = []
+    fluxes = []
+    for i in fold_nums:
+        times.append(time[fold_num == i])
+        fluxes.append(flux[fold_num == i])
+    return times, fluxes, fold_nums
+
+
+
+def sampled_view(tic_id, 
+                 time,
+                 flux,
+                 fold_num,
+                 period,
+                 num_bins=201,
+                 bin_width_factor=1.2 / 201,
+                 num_transits=7,
+                ):
+    times, fluxes, nums = sample_transits(time, flux, fold_num, period, num_transits=num_transits)
+    full_view = []
+    for t, f in zip(times, fluxes):
+        full_view.extend(
+            generate_view(
+                tic_id, 
+                t,
+                f,
+                period,
+                num_bins=num_bins,
+                bin_width=period * bin_width_factor,
+                t_min=min(t),
+                t_max=max(t),
+            )
+        )
+
+    # values in channel i, mask in channel i + 1
+    zipped = np.array(list(zip(*full_view)))
+    return zipped
+        
