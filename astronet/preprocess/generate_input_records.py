@@ -150,14 +150,10 @@ def _set_int64_feature(ex, name, value):
   ex.features.feature[name].int64_list.value.extend([int(v) for v in value])
 
 
-def _process_tce(tce, use_old_detrending=False, bkspace_min=0.5):
-  # TODO: Remove old detrending.
-  if use_old_detrending:
-    time, flux = preprocess.read_and_process_light_curve(tce.tic_id, FLAGS.tess_data_dir, 'KSPSAP_FLUX')
-  else:
-    time, flux = preprocess.read_and_process_light_curve(tce.tic_id, FLAGS.tess_data_dir, 'SAP_FLUX')
-    time, flux, _ = preprocess.detrend_and_filter(
-        tce.tic_id, time, flux, tce.Period, tce.Epoc, tce.Duration, bkspace_min, None)
+def _process_tce(tce, bkspace=None):
+  time, flux = preprocess.read_and_process_light_curve(tce.tic_id, FLAGS.tess_data_dir, 'SAP_FLUX')
+  time, flux, _ = preprocess.detrend_and_filter(
+      tce.tic_id, time, flux, tce.Period, tce.Epoc, tce.Duration, bkspace)
   time, flux, fold_num = preprocess.phase_fold_and_sort_light_curve(time, flux, tce.Period, tce.Epoc)
 
   # TODO: Include the mask in the data.
@@ -195,19 +191,15 @@ def _process_file_shard(tce_table, file_name):
     num_skipped = 0
     for _, tce in tce_table.iterrows():
       try:
-        try:
-          example = _process_tce(tce)
-        except Exception as e:
-          if isinstance(e, FileNotFoundError):
-            logging.warning("%s", e)
-            num_skipped += 1
-            continue
-          else:
-            logging.warning("Fallback to KSPSAP for %s", tce.tic_id)
-            example = _process_tce(tce, True)
+        example = _process_tce(tce)
       except Exception as e:
-        logging.warning("*** Failing %s: %s: %s", tce.tic_id, type(e), e)
-        raise
+        if isinstance(e, FileNotFoundError):
+          logging.warning("%s", e)
+          num_skipped += 1
+          continue
+        else:
+          logging.warning("*** Failing %s: %s: %s", tce.tic_id, type(e), e)
+          raise
       writer.write(example.SerializeToString())
 
       num_processed += 1
