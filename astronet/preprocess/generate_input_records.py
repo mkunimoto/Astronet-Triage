@@ -127,12 +127,15 @@ parser.add_argument(
 
 
 
-def _set_float_feature(ex, name, value):
+def _set_float_feature(ex, tce, name, value):
   """Sets the value of a float feature in a tensorflow.train.Example proto."""
   assert name not in ex.features.feature, "Duplicate feature: %s" % name
   if isinstance(value, np.ndarray):
     value = value.reshape((-1,))
-  ex.features.feature[name].float_list.value.extend([float(v) for v in value])
+  values = [float(v) for v in value]
+  if any np.isnan(values):
+    raise ValueError(f'NaNs in {name} for {tce.tic_id}')
+  ex.features.feature[name].float_list.value.extend(values)
 
 
 def _set_bytes_feature(ex, name, value):
@@ -162,29 +165,21 @@ def _process_tce(tce, use_old_detrending=False, bkspace_min=0.5):
   local_view, _, _ = preprocess.local_view(tce.tic_id, time, flux, tce.Period, tce.Duration)
   secondary_view, _, _ = preprocess.secondary_view(tce.tic_id, time, flux, tce.Period, tce.Duration)
   sample_segments_view = preprocess.sample_segments_view(tce.tic_id, time, flux, fold_num, tce.Period)
-  if any(np.isnan(global_view)):
-    raise ValueError("NaN in global view for {}".format(tce.tic_id))
-  if any(np.isnan(local_view)):
-    raise ValueError("NaN in local view for {}".format(tce.tic_id))
-  if any(np.isnan(secondary_view)):
-    raise ValueError("NaN in secondary view for {}".format(tce.tic_id))
-  if any(np.isnan(sample_segments_view).reshape((-1,))):
-    raise ValueError("NaN in sample segments view for {}".format(tce.tic_id))
 
   ex = tf.train.Example()
 
-  _set_float_feature(ex, 'global_view', global_view)
-  _set_float_feature(ex, 'local_view', local_view)
-  _set_float_feature(ex, 'secondary_view', secondary_view)
-  _set_float_feature(ex, 'sample_segments_view', sample_segments_view)
-  _set_float_feature(ex, 'n_folds', [max(fold_num)])
-  _set_float_feature(ex, 'n_points', [len(fold_num)])
+  _set_float_feature(ex, tce, 'global_view', global_view)
+  _set_float_feature(ex, tce, 'local_view', local_view)
+  _set_float_feature(ex, tce, 'secondary_view', secondary_view)
+  _set_float_feature(ex, tce, 'sample_segments_view', sample_segments_view)
+  _set_float_feature(ex, tce, 'n_folds', [max(fold_num)])
+  _set_float_feature(ex, tce, 'n_points', [len(fold_num)])
     
   for col_name, value in tce.items():
     if col_name in ('tic_id', 'Epoc', 'Sectors') or col_name.startswith('disp_'):
         _set_int64_feature(ex, col_name, [int(value)])
     else:
-        _set_float_feature(ex, col_name, [float(value)])
+        _set_float_feature(ex, tce, col_name, [float(value)])
 
   return ex
 
