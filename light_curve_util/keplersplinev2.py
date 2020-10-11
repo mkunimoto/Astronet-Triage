@@ -401,8 +401,7 @@ def choosekeplersplinev2(time,flux, bkspace_min=0.5, bkspace_max=20, bkspace_num
           np.log10(bkspace_min), np.log10(bkspace_max), num=bkspace_num)
     
     spline, metadata = choose_kepler_spline(all_time, all_flux, verbose=verbose, 
-                                            bkspaces=bkspaces, all_input_mask=all_input_mask,
-                                            fixed_bkspace=fixed_bkspace)
+                                            bkspaces=bkspaces, all_input_mask=all_input_mask)
     spline = np.concatenate(spline)
     
     metadata.light_curve_mask = np.concatenate(metadata.light_curve_mask)

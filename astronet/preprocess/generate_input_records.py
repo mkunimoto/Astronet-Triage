@@ -133,7 +133,7 @@ def _set_float_feature(ex, tce, name, value):
   if isinstance(value, np.ndarray):
     value = value.reshape((-1,))
   values = [float(v) for v in value]
-  if any np.isnan(values):
+  if any(np.isnan(values)):
     raise ValueError(f'NaNs in {name} for {tce.tic_id}')
   ex.features.feature[name].float_list.value.extend(values)
 
@@ -151,9 +151,10 @@ def _set_int64_feature(ex, name, value):
 
 
 def _process_tce(tce, bkspace=None):
-  time, flux = preprocess.read_and_process_light_curve(tce.tic_id, FLAGS.tess_data_dir, 'SAP_FLUX')
+  orig_time, orig_flux = preprocess.read_and_process_light_curve(
+      tce.tic_id, FLAGS.tess_data_dir, 'SAP_FLUX')
   time, flux, _ = preprocess.detrend_and_filter(
-      tce.tic_id, time, flux, tce.Period, tce.Epoc, tce.Duration, bkspace)
+      tce.tic_id, orig_time, orig_flux, tce.Period, tce.Epoc, tce.Duration, bkspace)
   time, flux, fold_num = preprocess.phase_fold_and_sort_light_curve(time, flux, tce.Period, tce.Epoc)
 
   # TODO: Include the mask in the data.
@@ -161,7 +162,7 @@ def _process_tce(tce, bkspace=None):
   local_view, _, _ = preprocess.local_view(tce.tic_id, time, flux, tce.Period, tce.Duration)
   secondary_view, _, _ = preprocess.secondary_view(tce.tic_id, time, flux, tce.Period, tce.Duration)
   sample_segments_view = preprocess.sample_segments_view(tce.tic_id, time, flux, fold_num, tce.Period)
-
+    
   ex = tf.train.Example()
 
   _set_float_feature(ex, tce, 'global_view', global_view)
@@ -171,6 +172,14 @@ def _process_tce(tce, bkspace=None):
   _set_float_feature(ex, tce, 'n_folds', [max(fold_num)])
   _set_float_feature(ex, tce, 'n_points', [len(fold_num)])
     
+  for bkspace_f in [0.3, 0.7, 1.5, 5.0]:
+    time, flux, _ = preprocess.detrend_and_filter(
+        tce.tic_id, orig_time, orig_flux, tce.Period, tce.Epoc, tce.Duration, bkspace_f)
+    time, flux, fold_num = preprocess.phase_fold_and_sort_light_curve(time, flux, tce.Period, tce.Epoc)
+    global_view, _, _ = preprocess.global_view(tce.tic_id, time, flux, tce.Period)
+    _set_float_feature(ex, tce, f'global_view_{bkspace_f}', global_view)
+
+
   for col_name, value in tce.items():
     if col_name in ('tic_id', 'Epoc', 'Sectors') or col_name.startswith('disp_'):
         _set_int64_feature(ex, col_name, [int(value)])
