@@ -45,7 +45,7 @@ def tess_filenames(tic, base_dir):
     Returns:
       filename for given TIC.
     """
-    fitsfile = "tess*-*-%.16d-*-cr_llc.fits.gz" % int(tic)
+    fitsfile = "tess*-%.16d-*-cr_llc.fits.gz" % int(tic)
     file_names = glob.glob(os.path.join(base_dir, fitsfile))
     if len(file_names) != 1:
         raise ValueError(f'found {len(file_names)} files for {tic}: {file_names}')
