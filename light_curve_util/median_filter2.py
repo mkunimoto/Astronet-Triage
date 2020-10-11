@@ -79,7 +79,7 @@ def new_binning(time, flux, period, num_bins, t_min, t_max):
     #get the weight of each time point within the bin
     weight = [get_overlap(-hbw, hbw, in_bin[j] - hc, in_bin[j] + hc) / bin_width
               for j in range(len(in_bin))]
-    # TODO: don't ignore nans.
+    # TODO: don't ignore nans?
     bin_flux = np.nansum(weight * f_x) / np.nansum(weight)
     f[i] = bin_flux
 
