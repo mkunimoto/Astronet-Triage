@@ -160,22 +160,22 @@ def _process_tce(tce, use_old_detrending=False, bkspace_min=0.5):
   global_view, _ = preprocess.global_view(tce.tic_id, time, flux, tce.Period)
   local_view, _ = preprocess.local_view(tce.tic_id, time, flux, tce.Period, tce.Duration)
   secondary_view, _ = preprocess.secondary_view(tce.tic_id, time, flux, tce.Period, tce.Duration)
-  sampled_view = preprocess.sampled_view(tce.tic_id, time, flux, fold_num, tce.Period)
+  sample_segments_view = preprocess.sample_segments_view(tce.tic_id, time, flux, fold_num, tce.Period)
   if any(np.isnan(global_view)):
     raise ValueError("NaN in global view for {}".format(tce.tic_id))
   if any(np.isnan(local_view)):
     raise ValueError("NaN in local view for {}".format(tce.tic_id))
   if any(np.isnan(secondary_view)):
     raise ValueError("NaN in secondary view for {}".format(tce.tic_id))
-  if any(np.isnan(sampled_view).reshape((-1,))):
-    raise ValueError("NaN in sampled view for {}".format(tce.tic_id))
+  if any(np.isnan(sample_segments_view).reshape((-1,))):
+    raise ValueError("NaN in sample segments view for {}".format(tce.tic_id))
 
   ex = tf.train.Example()
 
   _set_float_feature(ex, 'global_view', global_view)
   _set_float_feature(ex, 'local_view', local_view)
   _set_float_feature(ex, 'secondary_view', secondary_view)
-  _set_float_feature(ex, 'sampled_view', sampled_view)
+  _set_float_feature(ex, 'sample_segments_view', sample_segments_view)
   _set_float_feature(ex, 'n_folds', [max(fold_num)])
   _set_float_feature(ex, 'n_points', [len(fold_num)])
     
