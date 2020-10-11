@@ -157,7 +157,7 @@ def _process_tce(tce, use_old_detrending=False, bkspace_min=0.5):
   else:
     time, flux = preprocess.read_and_process_light_curve(tce.tic_id, FLAGS.tess_data_dir, 'SAP_FLUX')
     time, flux, _ = preprocess.detrend_and_filter(
-        tce.tic_id, time, flux, tce.Period, tce.Epoc, tce.Duration, bkspace_min)
+        tce.tic_id, time, flux, tce.Period, tce.Epoc, tce.Duration, bkspace_min, None)
   time, flux, fold_num = preprocess.phase_fold_and_sort_light_curve(time, flux, tce.Period, tce.Epoc)
 
   # TODO: Include the mask in the data.

@@ -54,10 +54,10 @@ def filter_outliers(time, flux, mask):
   return time, flux
 
 
-def detrend_and_filter(tic_id, time, flux, period, epoch, duration, bkspace_min):
+def detrend_and_filter(tic_id, time, flux, period, epoch, duration, bkspace_min, fixed_bkspace):
   input_mask = get_spline_mask(time, period, epoch, duration)
   spline_flux = keplersplinev2.choosekeplersplinev2(
-      time, flux, input_mask=input_mask, bkspace_min=bkspace_min)
+      time, flux, input_mask=input_mask, bkspace_min=bkspace_min, fixed_bkspace=fixed_bkspace)
   detrended_flux = flux / spline_flux
   return filter_outliers(time, detrended_flux, input_mask)
 
