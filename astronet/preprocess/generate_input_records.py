@@ -148,6 +148,7 @@ def _set_int64_feature(ex, name, value):
 
 
 def _process_tce(tce, use_old_detrending=False, bkspace_min=0.5):
+  # TODO: Remove old detrending.
   if use_old_detrending:
     time, flux = preprocess.read_and_process_light_curve(tce.tic_id, FLAGS.tess_data_dir, 'KSPSAP_FLUX')
   else:
@@ -157,9 +158,9 @@ def _process_tce(tce, use_old_detrending=False, bkspace_min=0.5):
   time, flux, fold_num = preprocess.phase_fold_and_sort_light_curve(time, flux, tce.Period, tce.Epoc)
 
   # TODO: Include the mask in the data.
-  global_view, _ = preprocess.global_view(tce.tic_id, time, flux, tce.Period)
-  local_view, _ = preprocess.local_view(tce.tic_id, time, flux, tce.Period, tce.Duration)
-  secondary_view, _ = preprocess.secondary_view(tce.tic_id, time, flux, tce.Period, tce.Duration)
+  global_view, _, _ = preprocess.global_view(tce.tic_id, time, flux, tce.Period)
+  local_view, _, _ = preprocess.local_view(tce.tic_id, time, flux, tce.Period, tce.Duration)
+  secondary_view, _, _ = preprocess.secondary_view(tce.tic_id, time, flux, tce.Period, tce.Duration)
   sample_segments_view = preprocess.sample_segments_view(tce.tic_id, time, flux, fold_num, tce.Period)
   if any(np.isnan(global_view)):
     raise ValueError("NaN in global view for {}".format(tce.tic_id))

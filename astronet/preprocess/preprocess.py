@@ -127,15 +127,24 @@ def generate_view(tic_id,
     view = median_filter.median_filter(time, flux, num_bins, bin_width, t_min, t_max)
     mask = np.ones_like(view)
 
+  overshot_mask = np.zeros_like(view)
   if normalize:
+    # Normalization places:
+    #  * the minimum value at -1.0
+    #  * the median at 0.0
+    # This assumes the median holds the out-of-transit average value, so that negative values are
+    # transit-like and positive values overshoots.
+    # TODO: Use mean(50%ile) instead?
     bool_mask = mask > 0
     view = np.where(bool_mask, view - np.min(view[bool_mask]), view)
-    scale = np.abs(np.max(view) / 2)
+    scale = np.abs(np.median(view))
     if scale > 0:
         view /= scale
     view -= 1.0
 
-  return view, mask
+    overshot_mask[view > 1.0] = 1.0
+
+  return view, mask, overshot_mask
 
 
 def global_view(tic_id, time, flux, period, num_bins=201, bin_width_factor=1.2/201, new_binning=True):
@@ -355,7 +364,7 @@ def sample_segments_view(tic_id,
                 bin_width=period * bin_width_factor,
                 t_min=min(t),
                 t_max=max(t),
-            )
+            )[0:2]
         )
 
     # values in channel i, mask in channel i + 1
