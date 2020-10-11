@@ -118,14 +118,16 @@ def generate_view(tic_id,
   """
   try:
     if new_binning:
-      view, mask = median_filter2.new_binning(time, flux, period, num_bins, t_min, t_max)
+      view, mask, std = median_filter2.new_binning(time, flux, period, num_bins, t_min, t_max)
     else:
       view = median_filter.median_filter(time, flux, num_bins, bin_width, t_min, t_max)
       mask = np.ones_like(view)
+      std = np.zeros_like(view)
   except:
     logging.warning("Robust mean failed for %s, using median", tic_id)
     view = median_filter.median_filter(time, flux, num_bins, bin_width, t_min, t_max)
     mask = np.ones_like(view)
+    std = np.zeros_like(view)
 
   overshot_mask = np.zeros_like(view)
   if normalize:
@@ -140,11 +142,12 @@ def generate_view(tic_id,
     scale = np.abs(np.median(view))
     if scale > 0:
         view /= scale
+        std /= scale
     view -= 1.0
 
     overshot_mask[view > 1.0] = 1.0
 
-  return view, mask, overshot_mask
+  return view, std, mask, overshot_mask
 
 
 def global_view(tic_id, time, flux, period, num_bins=201, bin_width_factor=1.2/201, new_binning=True):
@@ -354,8 +357,7 @@ def sample_segments_view(tic_id,
     times, fluxes, nums = sample_segments(time, flux, fold_num, period, num_transits=num_transits)
     full_view = []
     for t, f in zip(times, fluxes):
-        full_view.extend(
-            generate_view(
+        view, _, mask, _ = generate_view(
                 tic_id, 
                 t,
                 f,
@@ -364,8 +366,9 @@ def sample_segments_view(tic_id,
                 bin_width=period * bin_width_factor,
                 t_min=min(t),
                 t_max=max(t),
-            )[0:2]
-        )
+            )
+        full_view.append(view)
+        full_view.append(mask)
 
     # values in channel i, mask in channel i + 1
     zipped = np.array(list(zip(*full_view)))

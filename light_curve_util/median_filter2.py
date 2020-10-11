@@ -47,6 +47,7 @@ def new_binning(time, flux, period, num_bins, t_min, t_max):
   hbw = bin_width / 2
   
   f = np.zeros(num_bins)
+  s = np.zeros(num_bins)
   v = np.ones(num_bins)
   for i, b in enumerate(bins_center):
     #time from bin center
@@ -82,5 +83,6 @@ def new_binning(time, flux, period, num_bins, t_min, t_max):
     # TODO: don't ignore nans?
     bin_flux = np.nansum(weight * f_x) / np.nansum(weight)
     f[i] = bin_flux
+    s[i] = np.std(f_x)
 
-  return f, v
+  return f, v, s
