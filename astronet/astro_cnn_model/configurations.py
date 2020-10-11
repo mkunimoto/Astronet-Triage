@@ -34,15 +34,15 @@ def local_global_new():
 
             "features": {
                 "local_view": {
-                    "length": 61,
+                    "shape": [61],
                     "is_time_series": True,
                 },
                 "global_view": {
-                    "length": 201,
+                    "shape": [201],
                     "is_time_series": True,
                 },
                 "secondary_view": {
-                    "length": 61,
+                    "shape": [61],
                     "is_time_series": True,
                 },
                 "Period": {

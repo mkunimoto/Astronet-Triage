@@ -37,7 +37,7 @@ def build_dataset(file_pattern,
         """Parses a single tf.Example into feature and label tensors."""
 
         data_fields = {
-            feature_name: tf.io.FixedLenFeature([feature.length], tf.float32)
+            feature_name: tf.io.FixedLenFeature(feature.shape, tf.float32)
             for feature_name, feature in input_config.features.items()
         }
         if include_labels:
