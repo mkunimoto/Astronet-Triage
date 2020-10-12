@@ -199,7 +199,13 @@ def _process_tce(tce, bkspace=None):
     if col_name in ('tic_id', 'Epoc', 'Sectors') or col_name.startswith('disp_'):
         _set_int64_feature(ex, col_name, [int(value)])
     else:
-        _set_float_feature(ex, tce, col_name, [float(value)])
+        f_val = float(value)
+        if np.isnan(f_val):
+            _set_int64_feature(ex, f'{col_name}_present', [0])
+            f_val = 0
+        else:
+            _set_int64_feature(ex, f'{col_name}_present', [1])
+        _set_float_feature(ex, tce, col_name, [f_val])
 
   return ex
 
