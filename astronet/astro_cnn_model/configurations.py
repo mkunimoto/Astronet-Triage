@@ -46,6 +46,7 @@ def local_global_new():
                     "is_time_series": True,
                 },
                 "Period": {
+                    "shape": [],
                     "is_time_series": False,
                     "mean": 8.071377,
                     "std": 11.233816,
@@ -53,6 +54,7 @@ def local_global_new():
                     "has_nans": False,
                 },
                 "Duration": {
+                    "shape": [],
                     "is_time_series": False,
                     "mean": 0.196459,
                     "std": 0.172065,
@@ -60,6 +62,7 @@ def local_global_new():
                     "has_nans": False,
                 },
                 "Transit_Depth": {
+                    "shape": [],
                     "is_time_series": False,
                     "mean": 3.847200e+05,
                     "std": 3.220359e+07,
@@ -67,6 +70,7 @@ def local_global_new():
                     "has_nans": False,
                 },
                 "Tmag": {
+                    "shape": [],
                     "is_time_series": False,
                     "mean": 10.162480,
                     "std": 1.225660,
@@ -74,6 +78,7 @@ def local_global_new():
                     "has_nans": False,
                 },
                 "star_mass": {
+                    "shape": [],
                     "is_time_series": False,
                     "mean": 1.382456,
                     "std": 0.387535,
@@ -81,6 +86,7 @@ def local_global_new():
                     "has_nans": True,
                 },
                 "star_rad": {
+                    "shape": [],
                     "is_time_series": False,
                     "mean": 11.881122,
                     "std": 19.495874,

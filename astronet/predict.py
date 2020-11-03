@@ -52,9 +52,17 @@ parser.add_argument(
     help="Name of file in which predictions will be saved.")
 
 
-def predict():
+def predict(legacy=False):
     model = tf.saved_model.load(FLAGS.model_dir)
     config = config_util.load_config(FLAGS.model_dir)
+    
+    if legacy:
+        for f in config.inputs.features.values():
+            l = getattr(f, 'length', None)
+            if l is None:
+                f.shape = []
+            else:
+                f.shape = [l]
 
     ds = input_ds.build_dataset(
         file_pattern=FLAGS.data_files,

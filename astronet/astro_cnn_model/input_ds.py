@@ -35,7 +35,7 @@ def build_dataset(file_pattern,
 
     def parse_example(serialized_example):
         """Parses a single tf.Example into feature and label tensors."""
-
+        
         data_fields = {
             feature_name: tf.io.FixedLenFeature(feature.shape, tf.float32)
             for feature_name, feature in input_config.features.items()

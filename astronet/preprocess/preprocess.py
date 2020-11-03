@@ -328,7 +328,7 @@ def secondary_view(tic_id,
     )
 
 
-def sample_segments(time, flux, fold_num, period, num_transits=10):
+def sample_segments(time, flux, fold_num, period, num_transits):
     n_folds = max(fold_num) + 1
     fold_size = [np.count_nonzero(fold_num == i) for i in range(n_folds)]
     # Add a small amount of noise to break ties between equally sized folds.
