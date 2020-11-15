@@ -141,7 +141,6 @@ def train(model, config):
 
     if FLAGS.model_dir:
         tf.saved_model.save(model, export_dir=dir_name)
-        print("Model saved:\n    {}\n".format(dir_name))
 
     return history
 

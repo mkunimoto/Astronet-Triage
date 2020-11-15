@@ -28,7 +28,6 @@ import astropy
 import tensorflow as tf
 
 from light_curve_util import keplersplinev2
-from light_curve_util import median_filter
 from light_curve_util import median_filter2
 from light_curve_util import util
 from light_curve_util import tess_io
@@ -99,7 +98,6 @@ def generate_view(tic_id,
                   t_min,
                   t_max,
                   normalize=True,
-                  new_binning=True,
                  ):
   """Generates a view of a phase-folded light curve using a median filter.
 
@@ -116,18 +114,7 @@ def generate_view(tic_id,
     1D NumPy array of size num_bins containing the median flux values of
     uniformly spaced bins on the phase-folded time axis.
   """
-  try:
-    if new_binning:
-      view, mask, std = median_filter2.new_binning(time, flux, period, num_bins, t_min, t_max)
-    else:
-      view = median_filter.median_filter(time, flux, num_bins, bin_width, t_min, t_max)
-      mask = np.ones_like(view)
-      std = np.zeros_like(view)
-  except:
-    logging.warning("Robust mean failed for %s, using median", tic_id)
-    view = median_filter.median_filter(time, flux, num_bins, bin_width, t_min, t_max)
-    mask = np.ones_like(view)
-    std = np.zeros_like(view)
+  view, mask, std = median_filter2.new_binning(time, flux, period, num_bins, t_min, t_max)
 
   overshot_mask = np.zeros_like(view)
   if normalize:

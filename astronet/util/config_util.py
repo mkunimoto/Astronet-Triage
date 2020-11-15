@@ -57,7 +57,6 @@ def log_and_save_config(config, output_dir):
     config_json = config.to_json(indent=2)
   else:
     config_json = json.dumps(config, indent=2)
-  logging.info("config: %s", config_json)
 
   tf.io.gfile.makedirs(output_dir)
   with tf.io.gfile.GFile(config_file(output_dir), "w") as f:
