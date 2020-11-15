@@ -58,7 +58,7 @@ parser.add_argument(
 parser.add_argument(
     "--model_dir",
     type=str,
-    default="",
+    default=None,
     help="Directory for model checkpoints and summaries.")
 
 parser.add_argument(

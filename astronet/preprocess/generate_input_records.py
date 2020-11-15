@@ -116,14 +116,8 @@ parser.add_argument(
 parser.add_argument(
     "--num_shards",
     type=int,
-    default=10,
+    default=20,
     help="Number of file shards to divide the training set into.")
-
-parser.add_argument(
-    "--num_worker_processes",
-    type=int,
-    default=5,
-    help="Number of subprocesses for processing the TCEs in parallel.")
 
 
 
@@ -150,7 +144,7 @@ def _set_int64_feature(ex, name, value):
   ex.features.feature[name].int64_list.value.extend([int(v) for v in value])
 
 
-def _process_tce(tce, bkspace=None):
+def _process_tce(tce, bkspace=None, extended=False):
   orig_time, orig_flux = preprocess.read_and_process_light_curve(
       tce.tic_id, FLAGS.tess_data_dir, 'SAP_FLUX')
   ex = tf.train.Example()
@@ -165,34 +159,43 @@ def _process_tce(tce, bkspace=None):
   local_view, local_std, _, _ = preprocess.local_view(tce.tic_id, time, flux, tce.Period, tce.Duration)
   secondary_view, secondary_std, _, _ = preprocess.secondary_view(
       tce.tic_id, time, flux, tce.Period, tce.Duration)
-  sample_segments_view = preprocess.sample_segments_view(tce.tic_id, time, flux, fold_num, tce.Period)
+
+  if extended:
+      sample_segments_view = preprocess.sample_segments_view(tce.tic_id, time, flux, fold_num, tce.Period)
     
   _set_float_feature(ex, tce, 'global_view', global_view)
-  _set_float_feature(ex, tce, 'global_std', global_std)
+  if extended:
+      _set_float_feature(ex, tce, 'global_std', global_std)
   _set_float_feature(ex, tce, 'local_view', local_view)
-  _set_float_feature(ex, tce, 'local_std', local_std)
+  if extended:
+      _set_float_feature(ex, tce, 'local_std', local_std)
   _set_float_feature(ex, tce, 'secondary_view', secondary_view)
-  _set_float_feature(ex, tce, 'secondary_std', secondary_std)
-  _set_float_feature(ex, tce, 'sample_segments_view', sample_segments_view)
+  if extended:
+      _set_float_feature(ex, tce, 'secondary_std', secondary_std)
+
+  if extended:
+      _set_float_feature(ex, tce, 'sample_segments_view', sample_segments_view)
+
   _set_float_feature(ex, tce, 'n_folds', [max(fold_num)])
   _set_float_feature(ex, tce, 'n_points', [len(fold_num)])
-    
-  time, flux, fold_num = preprocess.phase_fold_and_sort_light_curve(
-      detrended_time, detrended_flux, tce.Period * 2, tce.Epoc - tce.Period / 2)
-  global_view, _, _, _ = preprocess.global_view(tce.tic_id, time, flux, tce.Period * 2)
-  _set_float_feature(ex, tce, 'global_view_double_period', global_view)
 
-  time, flux, fold_num = preprocess.phase_fold_and_sort_light_curve(
-      detrended_time, detrended_flux, tce.Period / 2, tce.Epoc)
-  global_view, _, _, _ = preprocess.global_view(tce.tic_id, time, flux, tce.Period / 2)
-  _set_float_feature(ex, tce, 'global_view_half_period', global_view)
+  if extended:
+      time, flux, fold_num = preprocess.phase_fold_and_sort_light_curve(
+          detrended_time, detrended_flux, tce.Period * 2, tce.Epoc - tce.Period / 2)
+      global_view, _, _, _ = preprocess.global_view(tce.tic_id, time, flux, tce.Period * 2)
+      _set_float_feature(ex, tce, 'global_view_double_period', global_view)
 
-  for bkspace_f in [0.3, 0.7, 1.5, 5.0]:
-    time, flux, _ = preprocess.detrend_and_filter(
-        tce.tic_id, orig_time, orig_flux, tce.Period, tce.Epoc, tce.Duration, bkspace_f)
-    time, flux, fold_num = preprocess.phase_fold_and_sort_light_curve(time, flux, tce.Period, tce.Epoc)
-    global_view, _, _, _ = preprocess.global_view(tce.tic_id, time, flux, tce.Period)
-    _set_float_feature(ex, tce, f'global_view_{bkspace_f}', global_view)
+      time, flux, fold_num = preprocess.phase_fold_and_sort_light_curve(
+          detrended_time, detrended_flux, tce.Period / 2, tce.Epoc)
+      global_view, _, _, _ = preprocess.global_view(tce.tic_id, time, flux, tce.Period / 2)
+      _set_float_feature(ex, tce, 'global_view_half_period', global_view)
+
+      for bkspace_f in [0.3, 0.7, 1.5, 5.0]:
+        time, flux, _ = preprocess.detrend_and_filter(
+            tce.tic_id, orig_time, orig_flux, tce.Period, tce.Epoc, tce.Duration, bkspace_f)
+        time, flux, fold_num = preprocess.phase_fold_and_sort_light_curve(time, flux, tce.Period, tce.Epoc)
+        global_view, _, _, _ = preprocess.global_view(tce.tic_id, time, flux, tce.Period)
+        _set_float_feature(ex, tce, f'global_view_{bkspace_f}', global_view)
 
 
   for col_name, value in tce.items():
@@ -214,30 +217,49 @@ def _process_file_shard(tce_table, file_name):
   process_name = multiprocessing.current_process().name
   shard_name = os.path.basename(file_name)
   shard_size = len(tce_table)
-  logging.info("%s: %d items", shard_name, shard_size)
+    
+  existing = {}
+  try:
+    tfr = tf.data.TFRecordDataset(file_name)
+    for record in tfr:
+      ex_str = record.numpy()
+      ex = tf.train.Example.FromString(ex_str)
+      existing[ex.features.feature["tic_id"].int64_list.value[0]] = ex_str
+  except:
+    pass
 
   with tf.io.TFRecordWriter(file_name) as writer:
     num_processed = 0
     num_skipped = 0
+    num_existing = 0
+    print("", end='')
     for _, tce in tce_table.iterrows():
+      num_processed += 1
+      print("\r                                      ", end="")
+      print(f"\r[{num_processed}/{shard_size}] {tce['tic_id']}", end="")
+
+      if int(tce["tic_id"]) in existing:
+        print(" exists", end="")
+        sys.stdout.flush()
+        writer.write(existing[int(tce["tic_id"])])
+        num_existing += 1
+        continue
+
       try:
+        print(" processing", end="")
+        sys.stdout.flush()
         example = _process_tce(tce)
       except Exception as e:
-        if isinstance(e, FileNotFoundError):
-          logging.warning("%s", e)
-          num_skipped += 1
-          continue
-        else:
-          logging.warning("*** Failing %s: %s: %s", tce.tic_id, type(e), e)
-          raise
+        print(f" *** error: {e}")
+        num_skipped += 1
+        continue
+
+      print(" writing", end="")
+      sys.stdout.flush()
       writer.write(example.SerializeToString())
 
-      num_processed += 1
-      if not num_processed % 100:
-        logging.info("%d/%d %s", num_processed, shard_size, shard_name)
-
-  logging.info(
-      "%s: %d/%d written, %d skipped.", shard_name, num_processed, shard_size, num_skipped)
+  num_new = num_processed - num_skipped - num_existing
+  print(f"\r{shard_name}: {num_processed}/{shard_size} {num_new} new {num_skipped} bad")
 
 
 def main(_):
@@ -258,28 +280,16 @@ def main(_):
     for i in range(FLAGS.num_shards):
       start = boundaries[i]
       end = boundaries[i + 1]
-      file_shards.append((tce_table[start:end], os.path.join(
-          FLAGS.output_dir, "%.5d-of-%.5d" % (i, FLAGS.num_shards))))
+      file_shards.append((
+          start,
+          end,
+          os.path.join(FLAGS.output_dir, "%.5d-of-%.5d" % (i, FLAGS.num_shards))
+      ))
 
-    # Launch subprocesses for the file shards.
-    num_file_shards = len(file_shards)
-    num_processes = min(num_file_shards, FLAGS.num_worker_processes)
-    logging.info(
-        "Launching %d subprocesses for %d total file shards", num_processes, num_file_shards)
-
-    pool = multiprocessing.Pool(processes=num_processes)
-    async_results = [
-      pool.apply_async(_process_file_shard, file_shard)
-      for file_shard in file_shards
-    ]
-    pool.close()
-
-    # Instead of pool.join(), we call async_result.get() to ensure any exceptions
-    # raised by the worker processes are also raised here.
-    for async_result in async_results:
-      async_result.get()
-
-    logging.info("Finished processing %d total file shards", num_file_shards)
+    logging.info("Processing %d total file shards", len(file_shards))
+    for start, end, file_shard in file_shards:
+        _process_file_shard(tce_table[start:end], file_shard)
+    logging.info("Finished processing %d total file shards", len(file_shards))
 
 
 if __name__ == "__main__":
