@@ -19,8 +19,7 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-import scipy
-from third_party.robust_mean import robust_mean
+from light_curve_util import keplersplinev2
 
 
 def tmod(t, p, e):
@@ -37,7 +36,7 @@ def new_binning(time, flux, period, num_bins, t_min, t_max):
   bins_left_edge, step = np.linspace(
       t_min, t_max, num=num_bins, endpoint=False, retstep=True)
 
-  bin_width = step.copy()
+  bin_width = step
   hbw = bin_width / 2
   
   bins_center = bins_left_edge + 0.5 * bin_width
@@ -54,11 +53,16 @@ def new_binning(time, flux, period, num_bins, t_min, t_max):
     t_c = tmod(t, period, b)
     
     #find which points are within the bin
-    bin_mask = np.where(abs(t_c) <= hbw + hc)
+    bin_mask = abs(t_c) <= hbw + hc
+
+    if not any(bin_mask):
+        v[i] = 0.0
+        continue
+
     in_bin = t_c[bin_mask]
     f_x = flux[bin_mask]
     
-    if len(f_x) == 0:
+    if not len(f_x):
         v[i] = 0.0
         continue
 
@@ -67,21 +71,20 @@ def new_binning(time, flux, period, num_bins, t_min, t_max):
         continue
     
     #calculate the robust mean to remove outliers
-    _, _, mask = robust_mean.robust_mean(f_x, 3)
+    mask = keplersplinev2.robust_mean_mask(f_x)
     
     #remove outliers
     f_x = f_x[mask]
     in_bin = in_bin[mask]
     
-    if len(f_x) == 0:
+    if not len(f_x):
         v[i] = 0.0
         continue
 
     #get the weight of each time point within the bin
     weight = [get_overlap(-hbw, hbw, in_bin[j] - hc, in_bin[j] + hc) / bin_width
               for j in range(len(in_bin))]
-    # TODO: don't ignore nans?
-    bin_flux = np.nansum(weight * f_x) / np.nansum(weight)
+    bin_flux = np.sum(weight * f_x) / np.sum(weight)
     f[i] = bin_flux
     s[i] = np.std(f_x)
 

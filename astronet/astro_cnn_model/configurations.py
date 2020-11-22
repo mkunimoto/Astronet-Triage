@@ -46,51 +46,45 @@ def local_global_new():
                     "is_time_series": True,
                 },
                 "Period": {
-                    "shape": [],
+                    "shape": [1],
                     "is_time_series": False,
                     "mean": 8.071377,
                     "std": 11.233816,
-                    "length": 1,
                     "has_nans": False,
                 },
                 "Duration": {
-                    "shape": [],
+                    "shape": [1],
                     "is_time_series": False,
                     "mean": 0.196459,
                     "std": 0.172065,
-                    "length": 1,
                     "has_nans": False,
                 },
                 "Transit_Depth": {
-                    "shape": [],
+                    "shape": [1],
                     "is_time_series": False,
                     "mean": 3.847200e+05,
                     "std": 3.220359e+07,
-                    "length": 1,
                     "has_nans": False,
                 },
                 "Tmag": {
-                    "shape": [],
+                    "shape": [1],
                     "is_time_series": False,
                     "mean": 10.162480,
                     "std": 1.225660,
-                    "length": 1,
                     "has_nans": False,
                 },
                 "star_mass": {
-                    "shape": [],
+                    "shape": [1],
                     "is_time_series": False,
                     "mean": 1.382456,
                     "std": 0.387535,
-                    "length": 1,
                     "has_nans": True,
                 },
                 "star_rad": {
-                    "shape": [],
+                    "shape": [1],
                     "is_time_series": False,
                     "mean": 11.881122,
                     "std": 19.495874,
-                    "length": 1,
                     "has_nans": True,
                 },
             },
@@ -257,3 +251,167 @@ def local_global_new_tuned():
      'use_batch_norm': False}
 
   return config
+
+
+def extended():
+    config = {
+        "inputs": {
+            "label_columns": ["disp_E", "disp_N", "disp_J", "disp_S", "disp_B"],
+            "primary_class": 0,
+
+            "features": {
+                "local_view": {
+                    "shape": [61],
+                    "is_time_series": True,
+                },
+                "global_view": {
+                    "shape": [201],
+                    "is_time_series": True,
+                },
+                "secondary_view": {
+                    "shape": [61],
+                    "is_time_series": True,
+                },
+                "global_mask": {
+                    "shape": [201],
+                    "is_time_series": True,
+                },
+                "global_view_0.3": {
+                    "shape": [201],
+                    "is_time_series": True,
+                },
+                "global_view_0.3_mask": {
+                    "shape": [201],
+                    "is_time_series": True,
+                },
+                "global_view_5.0": {
+                    "shape": [201],
+                    "is_time_series": True,
+                },
+                "global_view_5.0_mask": {
+                    "shape": [201],
+                    "is_time_series": True,
+                },
+                "Period": {
+                    "shape": [1],
+                    "is_time_series": False,
+                    "mean": 8.071377,
+                    "std": 11.233816,
+                    "has_nans": False,
+                },
+                "Duration": {
+                    "shape": [1],
+                    "is_time_series": False,
+                    "mean": 0.196459,
+                    "std": 0.172065,
+                    "has_nans": False,
+                },
+                "Transit_Depth": {
+                    "shape": [1],
+                    "is_time_series": False,
+                    "mean": 1.222711e+07,
+                    "std": 6.974760e+08,
+                    "has_nans": False,
+                },
+                "Tmag": {
+                    "shape": [1],
+                    "is_time_series": False,
+                    "mean": 9.513815,
+                    "std": 1.483564,
+                    "has_nans": False,
+                },
+                "star_mass": {
+                    "shape": [1],
+                    "is_time_series": False,
+                    "mean": 1.382456,
+                    "std": 0.387535,
+                    "has_nans": True,
+                },
+                "star_rad": {
+                    "shape": [1],
+                    "is_time_series": False,
+                    "mean": 6.775783,
+                    "std": 9.139768,
+                    "has_nans": True,
+                },
+                "n_folds": {
+                    "shape": [1],
+                    "is_time_series": False,
+                    "log_scale": True,
+                    "min_val": 0,
+                    "max_val": 100,
+                    "has_nans": False,
+                },
+                "n_points": {
+                    "shape": [1],
+                    "is_time_series": False,
+                    "log_scale": True,
+                    "min_val": 300,
+                    "max_val": 1000,
+                    "has_nans": False,
+                },
+            },
+        },
+
+        "hparams": {
+            "prediction_threshold": 0.2,
+
+            "batch_size": 83,
+
+            "learning_rate": 5.203528044134961e-06,
+            "clip_gradient_norm": None,
+            "optimizer": "adam",
+            "one_minus_adam_beta_1": 0.16168028483420177,
+            "one_minus_adam_beta_2": 0.022674419033475692,
+            "adam_epsilon": 2.5037055725611666e-07,
+            
+            "use_batch_norm": False,
+          
+            "num_pre_logits_hidden_layers": 4,
+            "pre_logits_hidden_layer_size": 482,
+            "pre_logits_dropout_rate": 0.1690298097832756,
+          
+            "time_series_hidden": {
+                "global_view": {
+                    "cnn_num_blocks": 3,
+                    "cnn_block_size": 1,
+                    "cnn_initial_num_filters": 17,
+                    "cnn_block_filter_factor": 2,
+                    "cnn_kernel_size": 2,
+                    "convolution_padding": "same",
+                    "pool_size": 5,
+                    "pool_strides": 1,
+                    "extra_channels": [
+                        "global_mask",
+                        "global_view_5.0",
+                        "global_view_5.0_mask",
+                        "global_view_0.3",
+                        "global_view_0.3_mask",
+                    ],
+                },
+                "local_view": {
+                    "cnn_num_blocks": 3,
+                    "cnn_block_size": 1,
+                    "cnn_initial_num_filters": 17,
+                    "cnn_block_filter_factor": 2,
+                    "cnn_kernel_size": 2,
+                    "convolution_padding": "same",
+                    "pool_size": 6,
+                    "pool_strides": 1,
+                },
+                "secondary_view": {
+                    "cnn_num_blocks": 3,
+                    "cnn_block_size": 1,
+                    "cnn_initial_num_filters": 17,
+                    "cnn_block_filter_factor": 2,
+                    "cnn_kernel_size": 2,
+                    "convolution_padding": "same",
+                    "pool_size": 6,
+                    "pool_strides": 1,
+                },
+            },
+        },
+
+    }
+
+    return config

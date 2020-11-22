@@ -9,8 +9,6 @@ import warnings
 import numpy as np
 from pydl.pydlutils import bspline
 
-#from third_party.robust_mean import robust_mean
-
 
 class InsufficientPointsError(Exception):
   """Indicates that insufficient points were available for spline fitting."""
@@ -53,6 +51,22 @@ def split(all_time, all_flux, gap_width=0.75):
 
   return out_time, out_flux
 
+
+THREE_SIGMA_FACTOR = -0.15405 + (0.90723 + (-0.23584 + 0.020142 * 3) * 3) * 3
+
+def robust_mean_mask(y):
+  """Optimized version of robust_mean."""
+  absdev = np.abs(y - np.median(y))
+  sigma = 1.4826 * np.median(absdev)
+
+  if sigma < 1.0e-24:
+    sigma = 1.253 * np.mean(absdev)
+
+  mask = absdev <= 3 * sigma
+
+  sigma = np.std(y[mask]) / THREE_SIGMA_FACTOR
+
+  return absdev <= 3 * sigma
 
 def robust_mean(y, cut):
   """Computes a robust mean estimate in the presence of outliers.
@@ -112,7 +126,7 @@ def robust_mean(y, cut):
 
   return mean, mean_stddev, mask
 
-def kepler_spline(time, flux, bkspace=1.5, maxiter=5, outlier_cut=3, input_mask = None):
+def kepler_spline(time, flux, bkspace, maxiter=5, input_mask=None):
   """Computes a best-fit spline curve for a light curve segment.
 
   The spline is fit using an iterative process to remove outliers that may cause
@@ -169,7 +183,7 @@ def kepler_spline(time, flux, bkspace=1.5, maxiter=5, outlier_cut=3, input_mask 
       # less than outlier_cut*sigma, where sigma is a robust estimate of the
       # standard deviation of the residuals from the previous spline.
       residuals = flux - spline
-      new_mask = robust_mean(residuals, cut=outlier_cut)[2]
+      new_mask = robust_mean_mask(residuals)
       new_mask = np.logical_and(new_mask, input_mask)
       if np.all(new_mask == mask):
         break  # Spline converged.

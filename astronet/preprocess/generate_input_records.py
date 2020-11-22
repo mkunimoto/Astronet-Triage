@@ -88,7 +88,6 @@ import pandas as pd
 import tensorflow as tf
 
 from astronet.preprocess import preprocess
-from light_curve_util.median_filter import SparseLightCurveError
 
 
 parser = argparse.ArgumentParser()
@@ -154,52 +153,54 @@ def _process_tce(tce, bkspace=None, extended=False):
   time, flux, fold_num = preprocess.phase_fold_and_sort_light_curve(
       detrended_time, detrended_flux, tce.Period, tce.Epoc)
 
-  # TODO: Include the mask in the data.
-  global_view, global_std, _, _ = preprocess.global_view(tce.tic_id, time, flux, tce.Period)
-  local_view, local_std, _, _ = preprocess.local_view(tce.tic_id, time, flux, tce.Period, tce.Duration)
-  secondary_view, secondary_std, _, _ = preprocess.secondary_view(
+  global_view, global_std, global_mask, _ = preprocess.global_view(
+      tce.tic_id, time, flux, tce.Period)
+  local_view, local_std, local_mask, _ = preprocess.local_view(
+      tce.tic_id, time, flux, tce.Period, tce.Duration)
+  secondary_view, secondary_std, secondary_mask, _ = preprocess.secondary_view(
       tce.tic_id, time, flux, tce.Period, tce.Duration)
 
+  # TODO: Fix the padding bug.
   if extended:
-      sample_segments_view = preprocess.sample_segments_view(tce.tic_id, time, flux, fold_num, tce.Period)
+    sample_segments_view = preprocess.sample_segments_view(tce.tic_id, time, flux, fold_num, tce.Period)
     
   _set_float_feature(ex, tce, 'global_view', global_view)
-  if extended:
-      _set_float_feature(ex, tce, 'global_std', global_std)
+  _set_float_feature(ex, tce, 'global_std', global_std)
+  _set_float_feature(ex, tce, 'global_mask', global_mask)
   _set_float_feature(ex, tce, 'local_view', local_view)
-  if extended:
-      _set_float_feature(ex, tce, 'local_std', local_std)
+  _set_float_feature(ex, tce, 'local_std', local_std)
+  _set_float_feature(ex, tce, 'local_mask', local_mask)
   _set_float_feature(ex, tce, 'secondary_view', secondary_view)
-  if extended:
-      _set_float_feature(ex, tce, 'secondary_std', secondary_std)
+  _set_float_feature(ex, tce, 'secondary_std', secondary_std)
+  _set_float_feature(ex, tce, 'secondary_mask', secondary_mask)
 
   if extended:
-      _set_float_feature(ex, tce, 'sample_segments_view', sample_segments_view)
+    _set_float_feature(ex, tce, 'sample_segments_view', sample_segments_view)
 
   _set_float_feature(ex, tce, 'n_folds', [max(fold_num)])
   _set_float_feature(ex, tce, 'n_points', [len(fold_num)])
 
-  if extended:
-      time, flux, fold_num = preprocess.phase_fold_and_sort_light_curve(
-          detrended_time, detrended_flux, tce.Period * 2, tce.Epoc - tce.Period / 2)
-      global_view, _, _, _ = preprocess.global_view(tce.tic_id, time, flux, tce.Period * 2)
-      _set_float_feature(ex, tce, 'global_view_double_period', global_view)
+  time, flux, fold_num = preprocess.phase_fold_and_sort_light_curve(
+      detrended_time, detrended_flux, tce.Period * 2, tce.Epoc - tce.Period / 2)
+  global_view, _, _, _ = preprocess.global_view(tce.tic_id, time, flux, tce.Period * 2)
+  _set_float_feature(ex, tce, 'global_view_double_period', global_view)
 
-      time, flux, fold_num = preprocess.phase_fold_and_sort_light_curve(
-          detrended_time, detrended_flux, tce.Period / 2, tce.Epoc)
-      global_view, _, _, _ = preprocess.global_view(tce.tic_id, time, flux, tce.Period / 2)
-      _set_float_feature(ex, tce, 'global_view_half_period', global_view)
+  time, flux, fold_num = preprocess.phase_fold_and_sort_light_curve(
+      detrended_time, detrended_flux, tce.Period / 2, tce.Epoc)
+  global_view, _, _, _ = preprocess.global_view(tce.tic_id, time, flux, tce.Period / 2)
+  _set_float_feature(ex, tce, 'global_view_half_period', global_view)
 
-      for bkspace_f in [0.3, 0.7, 1.5, 5.0]:
-        time, flux, _ = preprocess.detrend_and_filter(
-            tce.tic_id, orig_time, orig_flux, tce.Period, tce.Epoc, tce.Duration, bkspace_f)
-        time, flux, fold_num = preprocess.phase_fold_and_sort_light_curve(time, flux, tce.Period, tce.Epoc)
-        global_view, _, _, _ = preprocess.global_view(tce.tic_id, time, flux, tce.Period)
-        _set_float_feature(ex, tce, f'global_view_{bkspace_f}', global_view)
+  for bkspace_f in [0.3, 5.0]:
+    time, flux, _ = preprocess.detrend_and_filter(
+        tce.tic_id, orig_time, orig_flux, tce.Period, tce.Epoc, tce.Duration, bkspace_f)
+    time, flux, fold_num = preprocess.phase_fold_and_sort_light_curve(time, flux, tce.Period, tce.Epoc)
+    global_view, _, global_mask, _ = preprocess.global_view(tce.tic_id, time, flux, tce.Period)
+    _set_float_feature(ex, tce, f'global_view_{bkspace_f}', global_view)
+    _set_float_feature(ex, tce, f'global_view_{bkspace_f}_mask', global_mask)
 
 
   for col_name, value in tce.items():
-    if col_name in ('tic_id', 'Epoc', 'Sectors') or col_name.startswith('disp_'):
+    if col_name.lower() in ('tic_id', 'tic id', 'epoc', 'sectors') or col_name.startswith('disp_'):
         _set_int64_feature(ex, col_name, [int(value)])
     else:
         f_val = float(value)
@@ -246,7 +247,7 @@ def _process_file_shard(tce_table, file_name):
         continue
 
       try:
-        print(" processing", end="")
+        print(" processing                           ", end="")
         sys.stdout.flush()
         example = _process_tce(tce)
       except Exception as e:
@@ -259,7 +260,7 @@ def _process_file_shard(tce_table, file_name):
       writer.write(example.SerializeToString())
 
   num_new = num_processed - num_skipped - num_existing
-  print(f"\r{shard_name}: {num_processed}/{shard_size} {num_new} new {num_skipped} bad")
+  print(f"\r{shard_name}: {num_processed}/{shard_size} {num_new} new {num_skipped} bad            ")
 
 
 def main(_):

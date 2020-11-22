@@ -53,7 +53,7 @@ parser.add_argument(
 
 
 def predict(legacy=False):
-    model = tf.saved_model.load(FLAGS.model_dir)
+    model = tf.keras.models.load_model(FLAGS.model_dir)
     config = config_util.load_config(FLAGS.model_dir)
     
     if legacy:

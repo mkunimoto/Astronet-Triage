@@ -79,11 +79,17 @@ def build_dataset(file_pattern,
                         mask = tf.ones_like(value)
                     features[f"{name}_present"] = mask
                 if use_value:
-                    value = (value - cfg['mean']) / cfg['std']
+                    if getattr(cfg, "log_scale", False):
+                        value = tf.cast(value, tf.float64)
+                        value = tf.minimum(value, cfg.max_val)
+                        value = value - cfg.min_val + 1
+                        value = tf.math.log(value) / tf.math.log(tf.constant(cfg.max_val, tf.float64))
+                        value = tf.cast(value, tf.float32)
+                    else:
+                        value = (value - cfg["mean"]) / cfg["std"]
                 else:
                     value = tf.zeros_like(value)
             features[name] = value
-
         if include_labels:
             return features, labels, weights
         elif include_identifiers:

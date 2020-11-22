@@ -42,10 +42,6 @@ The architecture of this model is:
      time_series_feature_1     time_series_feature_2    ...     aux_features
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import tensorflow as tf
 
 
@@ -75,7 +71,6 @@ class AstroCNNModel(tf.keras.Model):
     def _create_conv_block(self, config, name):
         block_params = config.hparams.time_series_hidden[name]
         layers = []
-        layers.append(tf.keras.layers.Lambda(lambda x: tf.expand_dims(x, -1)))
         for i in range(block_params.cnn_num_blocks):
             block_name = '{}_block_{}'.format(name, i + 1)
             num_filters = int(block_params.cnn_initial_num_filters *
@@ -112,7 +107,10 @@ class AstroCNNModel(tf.keras.Model):
         aux_inputs = {}
         for k, v in inputs.items():
             if k in self.config.hparams.time_series_hidden:
-                ts_inputs[k] = v
+                chans = [v]
+                for extra in getattr(self.config.hparams.time_series_hidden[k], 'extra_channels', []):
+                    chans.append(inputs[extra])
+                ts_inputs[k] = tf.stack(chans, axis=-1)
             else:
                 aux_inputs[k] = v
         y = [

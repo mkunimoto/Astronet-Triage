@@ -77,6 +77,9 @@ def phase_fold_and_sort_light_curve(time, flux, period, t0):
     folded_flux: 1D NumPy array. Values are the same as the original input
         array, but sorted by folded_time.
   """
+  if not len(time):
+    return np.array([]), np.array([]), np.array([])
+
   # Phase fold time.
   time, fold_num = util.phase_fold_time(time, period, t0)
 
@@ -125,19 +128,20 @@ def generate_view(tic_id,
     # transit-like and positive values overshoots.
     # TODO: Use mean(50%ile) instead?
     bool_mask = mask > 0
-    view = np.where(bool_mask, view - np.min(view[bool_mask]), view)
-    scale = np.abs(np.median(view))
-    if scale > 0:
-        view /= scale
-        std /= scale
-    view -= 1.0
+    if any(bool_mask):
+        view = np.where(bool_mask, view - np.min(view[bool_mask]), view)
+        scale = np.abs(np.median(view))
+        if scale > 0:
+            view /= scale
+            std /= scale
+        view -= 1.0
 
-    overshot_mask[view > 1.0] = 1.0
+        overshot_mask[view > 1.0] = 1.0
 
   return view, std, mask, overshot_mask
 
 
-def global_view(tic_id, time, flux, period, num_bins=201, bin_width_factor=1.2/201, new_binning=True):
+def global_view(tic_id, time, flux, period, num_bins=201, bin_width_factor=1.2/201):
   """Generates a 'global view' of a phase folded light curve.
 
   See Section 3.3 of Shallue & Vanderburg, 2018, The Astronomical Journal.
@@ -162,8 +166,7 @@ def global_view(tic_id, time, flux, period, num_bins=201, bin_width_factor=1.2/2
       num_bins=num_bins,
       bin_width=period * bin_width_factor,
       t_min=-period / 2,
-      t_max=period / 2,
-      new_binning=new_binning)
+      t_max=period / 2)
 
 
 def local_view(tic_id, 
@@ -173,8 +176,7 @@ def local_view(tic_id,
                duration,
                num_bins=61,
                bin_width_factor=0.16,
-               num_durations=2,
-               new_binning=True):
+               num_durations=2):
   """Generates a 'local view' of a phase folded light curve.
   See Section 3.3 of Shallue & Vanderburg, 2018, The Astronomical Journal.
   http://iopscience.iop.org/article/10.3847/1538-3881/aa9e09/meta
@@ -199,8 +201,7 @@ def local_view(tic_id,
       num_bins=num_bins,
       bin_width=duration * bin_width_factor,
       t_min=max(-period / 2, -duration * num_durations),
-      t_max=min(period / 2, duration * num_durations),
-      new_binning=new_binning)
+      t_max=min(period / 2, duration * num_durations))
 
 
 def mask_transit(time, duration, period, mask_width=2, phase_limit=0.1):
@@ -274,8 +275,7 @@ def secondary_view(tic_id,
                    duration,
                    num_bins=61,
                    bin_width_factor=0.16,
-                   num_durations=4
-                  ):
+                   num_durations=4):
     """Generates a 'local view' of a phase folded light curve, centered on phase 0.5.
       See Section 3.3 of Shallue & Vanderburg, 2018, The Astronomical Journal.
       http://iopscience.iop.org/article/10.3847/1538-3881/aa9e09/meta
@@ -293,10 +293,14 @@ def secondary_view(tic_id,
         uniformly spaced bins on the phase-folded time axis.
       """
     
-    t0, new_time, new_flux = find_secondary(time, flux, duration, period)
-    
-    t_min = max(t0 - period / 2, t0 - duration * num_durations, new_time[0])
-    t_max = min(t0 + period / 2, t0 + duration * num_durations, new_time[-1])
+    if len(time):
+        t0, new_time, new_flux = find_secondary(time, flux, duration, period)
+        t_min = max(t0 - period / 2, t0 - duration * num_durations, new_time[0])
+        t_max = min(t0 + period / 2, t0 + duration * num_durations, new_time[-1])
+    else:
+        new_time, new_flux = time, flux
+        t_min = 0.0
+        t_max = 0.0
 
     if bin_width_factor * duration < (t_max - t_min):
         bin_width = bin_width_factor * duration
@@ -339,8 +343,7 @@ def sample_segments_view(tic_id,
                          period,
                          num_bins=101,
                          bin_width_factor=1.2 / 101,
-                         num_transits=7,
-                        ):
+                         num_transits=7):
     times, fluxes, nums = sample_segments(time, flux, fold_num, period, num_transits=num_transits)
     full_view = []
     for t, f in zip(times, fluxes):
@@ -351,8 +354,8 @@ def sample_segments_view(tic_id,
                 period,
                 num_bins=num_bins,
                 bin_width=period * bin_width_factor,
-                t_min=min(t),
-                t_max=max(t),
+                t_min=min(t) if len(t) else 0,
+                t_max=max(t) if len(t) else 0,
             )
         full_view.append(view)
         full_view.append(mask)

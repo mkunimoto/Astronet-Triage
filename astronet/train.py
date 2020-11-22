@@ -58,7 +58,7 @@ parser.add_argument(
 parser.add_argument(
     "--model_dir",
     type=str,
-    default=None,
+    default="",
     help="Directory for model checkpoints and summaries.")
 
 parser.add_argument(
@@ -140,7 +140,7 @@ def train(model, config):
         validation_data=eval_ds)
 
     if FLAGS.model_dir:
-        tf.saved_model.save(model, export_dir=dir_name)
+        model.save(dir_name)
 
     return history
 
