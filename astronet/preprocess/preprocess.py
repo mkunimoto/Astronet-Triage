@@ -11,13 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Functions for reading and preprocessing light curves."""
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import sys
 import os
 import traceback
@@ -320,6 +314,9 @@ def secondary_view(tic_id,
 
 
 def sample_segments(time, flux, fold_num, period, num_transits):
+    if not len(time):
+        return [], [], []
+
     n_folds = max(fold_num) + 1
     fold_size = [np.count_nonzero(fold_num == i) for i in range(n_folds)]
     # Add a small amount of noise to break ties between equally sized folds.
@@ -335,14 +332,13 @@ def sample_segments(time, flux, fold_num, period, num_transits):
     return times, fluxes, fold_nums
 
 
-
 def sample_segments_view(tic_id, 
                          time,
                          flux,
                          fold_num,
                          period,
                          num_bins=101,
-                         bin_width_factor=1.2 / 101,
+                         bin_width_factor=3.0 / 101,
                          num_transits=7):
     times, fluxes, nums = sample_segments(time, flux, fold_num, period, num_transits=num_transits)
     full_view = []
@@ -359,8 +355,9 @@ def sample_segments_view(tic_id,
             )
         full_view.append(view)
         full_view.append(mask)
+    for _ in range(num_transits - len(times)):
+        full_view.append(np.zeros([num_bins], dtype=float))
+        full_view.append(np.zeros([num_bins], dtype=float))
 
     # values in channel i, mask in channel i + 1
-    zipped = np.array(list(zip(*full_view)))
-    return zipped
-        
+    return np.stack(full_view)

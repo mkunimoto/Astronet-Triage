@@ -1,9 +1,4 @@
 """Functions for computing normalization splines for Kepler light curves."""
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import warnings
 
 import numpy as np
@@ -157,9 +152,7 @@ def kepler_spline(time, flux, bkspace, maxiter=5, input_mask=None):
         spacing is too small.
   """
   if len(time) < 4:
-    raise InsufficientPointsError(
-        "Cannot fit a spline on less than 4 points. Got {} points.".format(
-            len(time)))
+    return None, None, True, False
 
   # Rescale time into [0, 1].
   t_min = np.min(time)
@@ -173,7 +166,7 @@ def kepler_spline(time, flux, bkspace, maxiter=5, input_mask=None):
   # Mask indicating the points used to fit the spline.
   mask = None
 
-  if np.all(input_mask == None): input_mask = np.ones_like(time, dtype=np.bool)
+  assert input_mask is not None
 
   for _ in range(maxiter):
     if spline is None:
@@ -196,9 +189,7 @@ def kepler_spline(time, flux, bkspace, maxiter=5, input_mask=None):
       # 4 points. However, since the outliers were such a significant fraction
       # of the curve, the spline from the previous iteration is probably junk,
       # and we consider this a fatal error.
-      raise InsufficientPointsError(
-          "Cannot fit a spline on less than 4 points. After removing "
-          "outliers, got {} points.".format(np.sum(mask)))
+      return None, None, True, False
 
     try:
       with warnings.catch_warnings():
@@ -212,12 +203,12 @@ def kepler_spline(time, flux, bkspace, maxiter=5, input_mask=None):
       # Evaluate spline at the time points.
       spline = curve.value(time)[0]
     except (IndexError, TypeError, ValueError) as e:
-      raise SplineError(
-          "Fitting spline failed with error: '{}'. This might be caused by the "
-          "breakpoint spacing being too small, and/or there being insufficient "
-          "points to fit the spline in one of the intervals.".format(e))
+      # This might be caused by the breakpoint spacing being too small,
+      # and/or there being insufficient points to fit the spline in one of the intervals.
+      warnings.warn("Non-fatal spline error: {}".format(e))
+      return None, None, False, True
 
-  return spline, mask
+  return spline, mask, False, False
 
 
 class SplineMetadata(object):
@@ -309,7 +300,7 @@ def choose_kepler_spline(all_time,
   # https://www.mathworks.com/help/stats/mad.html.
   sigma = np.median(np.abs(scaled_diffs)) * 1.48
     
-    
+
   #Now if we don't input any input mask we need to create a set of input masks that are all true
   if np.all(all_input_mask == None): 
         all_input_mask = []
@@ -326,25 +317,19 @@ def choose_kepler_spline(all_time,
     bad_bkspace = False  # Indicates that the current bkspace should be skipped.
     for time, flux, this_input_mask in zip(all_time, all_flux, all_input_mask):
       # Fit B-spline to this light-curve segment.
-      try:
-        spline_piece, mask = kepler_spline(
-            time, flux, bkspace=bkspace, maxiter=maxiter, input_mask = this_input_mask)
-      except InsufficientPointsError as e:
+      spline_piece, mask, too_few_points, bad_bkspace = kepler_spline(
+          time, flux, bkspace=bkspace, maxiter=maxiter, input_mask = this_input_mask)
+      if too_few_points:
         # It's expected to occasionally see intervals with insufficient points,
         # especially if periodic signals have been removed from the light curve.
         # Skip this interval, but continue fitting the spline.
-        if verbose:
-          warnings.warn(str(e))
         spline.append(np.array([np.nan] * len(flux)))
         light_curve_mask.append(np.zeros_like(flux, dtype=np.bool))
         continue
-      except SplineError as e:
+      elif bad_bkspace:
         # It's expected to get a SplineError occasionally for small values of
         # bkspace. Skip this bkspace.
-        if verbose:
-          warnings.warn("Bad bkspace {}: {}".format(bkspace, e))
         metadata.bad_bkspaces.append(bkspace)
-        bad_bkspace = True
         break
 
       spline.append(spline_piece)
@@ -398,7 +383,7 @@ def choose_kepler_spline(all_time,
 
 
 def choosekeplersplinev2(time,flux, bkspace_min=0.5, bkspace_max=20, bkspace_num=20, 
-                         maxiter=5, verbose=False, input_mask=None, gap_width_in=None,
+                         maxiter=5, input_mask=None, gap_width_in=None,
                          return_metadata=False, fixed_bkspace=None):
     if gap_width_in == None:
         gap_width_in = bkspace_min
@@ -414,8 +399,8 @@ def choosekeplersplinev2(time,flux, bkspace_min=0.5, bkspace_max=20, bkspace_num
         bkspaces = np.logspace(
           np.log10(bkspace_min), np.log10(bkspace_max), num=bkspace_num)
     
-    spline, metadata = choose_kepler_spline(all_time, all_flux, verbose=verbose, 
-                                            bkspaces=bkspaces, all_input_mask=all_input_mask)
+    spline, metadata = choose_kepler_spline(
+        all_time, all_flux, bkspaces=bkspaces, all_input_mask=all_input_mask)
     spline = np.concatenate(spline)
     
     metadata.light_curve_mask = np.concatenate(metadata.light_curve_mask)

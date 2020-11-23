@@ -13,11 +13,6 @@
 # limitations under the License.
 
 """Utility function for smoothing data using a median filter."""
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import numpy as np
 from light_curve_util import keplersplinev2
 

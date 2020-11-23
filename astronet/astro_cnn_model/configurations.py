@@ -292,6 +292,10 @@ def extended():
                     "shape": [201],
                     "is_time_series": True,
                 },
+                "sample_segments_view": {
+                    "shape": [101, 14],
+                    "is_time_series": True,
+                },
                 "Period": {
                     "shape": [1],
                     "is_time_series": False,
@@ -354,7 +358,7 @@ def extended():
         },
 
         "hparams": {
-            "prediction_threshold": 0.2,
+            "prediction_threshold": 0.2152499407880693,
 
             "batch_size": 83,
 
@@ -370,6 +374,19 @@ def extended():
             "num_pre_logits_hidden_layers": 4,
             "pre_logits_hidden_layer_size": 482,
             "pre_logits_dropout_rate": 0.1690298097832756,
+            
+            "aux_inputs": [
+                "Period",
+                "Duration",
+                "Transit_Depth",
+                "Tmag",
+                "star_mass",
+                "star_mass_present",
+                "star_rad",
+                "star_rad_present",
+                "n_folds",
+                "n_points"
+            ],
           
             "time_series_hidden": {
                 "global_view": {
@@ -408,6 +425,17 @@ def extended():
                     "convolution_padding": "same",
                     "pool_size": 6,
                     "pool_strides": 1,
+                },
+                "sample_segments_view": {
+                    "cnn_num_blocks": 3,
+                    "cnn_block_size": 1,
+                    "cnn_initial_num_filters": 17,
+                    "cnn_block_filter_factor": 2,
+                    "cnn_kernel_size": 2,
+                    "convolution_padding": "same",
+                    "pool_size": 6,
+                    "pool_strides": 1,
+                    "multichannel": True,
                 },
             },
         },

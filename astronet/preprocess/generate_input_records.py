@@ -10,7 +10,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 r"""Script to preprocesses data from the Kepler space telescope.
 
 This script produces training, validation and test sets of labeled Kepler
@@ -72,10 +71,6 @@ The columns include:
   tce_period: Orbital period of the detected event, in days.
   ...
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import argparse
 import multiprocessing
 import os
@@ -143,7 +138,7 @@ def _set_int64_feature(ex, name, value):
   ex.features.feature[name].int64_list.value.extend([int(v) for v in value])
 
 
-def _process_tce(tce, bkspace=None, extended=False):
+def _process_tce(tce, bkspace=None):
   orig_time, orig_flux = preprocess.read_and_process_light_curve(
       tce.tic_id, FLAGS.tess_data_dir, 'SAP_FLUX')
   ex = tf.train.Example()
@@ -160,9 +155,7 @@ def _process_tce(tce, bkspace=None, extended=False):
   secondary_view, secondary_std, secondary_mask, _ = preprocess.secondary_view(
       tce.tic_id, time, flux, tce.Period, tce.Duration)
 
-  # TODO: Fix the padding bug.
-  if extended:
-    sample_segments_view = preprocess.sample_segments_view(tce.tic_id, time, flux, fold_num, tce.Period)
+  sample_segments_view = preprocess.sample_segments_view(tce.tic_id, time, flux, fold_num, tce.Period)
     
   _set_float_feature(ex, tce, 'global_view', global_view)
   _set_float_feature(ex, tce, 'global_std', global_std)
@@ -174,11 +167,10 @@ def _process_tce(tce, bkspace=None, extended=False):
   _set_float_feature(ex, tce, 'secondary_std', secondary_std)
   _set_float_feature(ex, tce, 'secondary_mask', secondary_mask)
 
-  if extended:
-    _set_float_feature(ex, tce, 'sample_segments_view', sample_segments_view)
+  _set_float_feature(ex, tce, 'sample_segments_view', sample_segments_view)
 
-  _set_float_feature(ex, tce, 'n_folds', [max(fold_num)])
-  _set_float_feature(ex, tce, 'n_points', [len(fold_num)])
+  _set_float_feature(ex, tce, 'n_folds', [max(fold_num) if len(fold_num) else 0])
+  _set_float_feature(ex, tce, 'n_points', [len(fold_num) if len(fold_num) else 0])
 
   time, flux, fold_num = preprocess.phase_fold_and_sort_light_curve(
       detrended_time, detrended_flux, tce.Period * 2, tce.Epoc - tce.Period / 2)
@@ -247,7 +239,7 @@ def _process_file_shard(tce_table, file_name):
         continue
 
       try:
-        print(" processing                           ", end="")
+        print(" processing", end="")
         sys.stdout.flush()
         example = _process_tce(tce)
       except Exception as e:
@@ -255,7 +247,7 @@ def _process_file_shard(tce_table, file_name):
         num_skipped += 1
         continue
 
-      print(" writing", end="")
+      print(" writing                   ", end="")
       sys.stdout.flush()
       writer.write(example.SerializeToString())
 
