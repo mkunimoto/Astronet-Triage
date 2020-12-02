@@ -27,14 +27,11 @@ from light_curve_util import util
 from light_curve_util import tess_io
 from statsmodels.robust import scale
 
-
-def read_and_process_light_curve(tic, tess_data_dir, flux_key='KSPSAP_FLUX'):
-  file_names = tess_io.tess_filenames(tic, tess_data_dir)
-  assert file_names
-  all_time, all_mag = tess_io.read_tess_light_curve(file_names, flux_key)
+def read_and_process_light_curve(tic, tess_data_dir, flux_key='KSPMagnitude'):
+  file_name = '%s/%s.h5' % (tess_data_dir, tic)
+  all_time, all_flux = tess_io.read_tess_light_curve(file_name, flux_key)
   assert len(all_time)
-  return all_time, all_mag
-
+  return all_time, all_flux
 
 def get_spline_mask(time, period, t0, tdur):
   phase, _ = util.phase_fold_time(time, period, t0)
@@ -45,7 +42,6 @@ def filter_outliers(time, flux, mask):
   valid = ~np.isnan(flux)
   return time[valid], flux[valid], mask[valid]
   return time, flux
-
 
 def detrend_and_filter(tic_id, time, flux, period, epoch, duration, fixed_bkspace):
   input_mask = get_spline_mask(time, period, epoch, duration)
