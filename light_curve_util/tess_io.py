@@ -24,9 +24,10 @@ import os
 
 import numpy as np
 import astropy 
-from astropy.io import fits
 
+from lctools.hdf5lc import HDFLightCurve 
 
+'''
 def tess_filenames(tic, base_dir):
     """Returns the light curve filename for a TESS target star.
 
@@ -52,7 +53,7 @@ def tess_filenames(tic, base_dir):
     filename, = file_names
 
     return filename
-
+'''
 
 def read_tess_light_curve(filename, flux_key):
     """Reads time and flux measurements for a Kepler target star.
@@ -65,22 +66,23 @@ def read_tess_light_curve(filename, flux_key):
       time: Numpy array; the time values of the light curve.
       flux: Numpy array corresponding to the time array.
     """
-    f = fits.open(filename)
-    time = (f[1].data["TIME"]).astype(float)
-    flux = (f[1].data[flux_key]).astype(float)
-    
+    lc = HDFLightCurve(filename)
+    lc.load_from_file(label='all', ap=-1, rawmagkey='RawMagnitude', dmagkey='KSPMagnitude')
+    time = lc.data['jd].astype(float)
+    if flux_key == 'RawMagnitude':
+        mag = lc.data['rlc'].astype(float)
+    elif flux_key == 'KSPMagnitude':
+        mag = lc.data['ltflc'].astype(float)
     if np.max(time) > 1354: 
-        quality = f[1].data["QUALITY"]
+        quality = lc.data['flag']
         quality_flag = quality==0
-        
         # Remove outliers
         time = time[quality_flag]
-        flux = flux[quality_flag]
-
+        mag = mag[quality_flag]
         # Remove NaN flux values.
-        valid_indices = np.where(np.isfinite(flux))
+        valid_indices = np.where(np.isfinite(mag))
         time = time[valid_indices]
-        flux = flux[valid_indices]
+        mag = mag[valid_indices]
     else:
         # manually remove sector 1 outliers
         bad = np.array([0, 1, 2, 31, 49, 88, 121, 152, 186, 188, 199,
@@ -106,19 +108,16 @@ def read_tess_light_curve(filename, flux_key):
                1112, 1113, 1114, 1141, 1175, 1180, 1183, 1191, 1193, 1195, 1196,
                1208, 1209, 1210, 1214, 1225, 1226, 1231, 1232, 1233, 1235, 1258,
                1278, 1279, 1280])
-
         bad = bad[bad < len(time)]
         mask = np.ones(len(time))
         mask[bad] = 0
         mask = mask.astype(bool)
         time = time[mask]
-        flux = flux[mask]
-
-        valid_indices = np.where(np.isfinite(flux))
+        mag = mag[mask]
+        valid_indices = np.where(np.isfinite(mag))
         time = time[valid_indices]
-        flux = flux[valid_indices]
-
-
+        mag = mag[valid_indices]
+    flux = 10.**(-0.4*(mag - np.nanmedian(mag)))
     return time,flux 
 
 
