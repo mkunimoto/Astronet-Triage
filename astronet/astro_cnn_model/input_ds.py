@@ -81,6 +81,7 @@ def build_dataset(file_pattern,
                 if use_value:
                     if getattr(cfg, "log_scale", False):
                         value = tf.cast(value, tf.float64)
+                        value = tf.maximum(value, cfg.min_val)
                         value = tf.minimum(value, cfg.max_val)
                         value = value - cfg.min_val + 1
                         value = tf.math.log(value) / tf.math.log(tf.constant(cfg.max_val, tf.float64))

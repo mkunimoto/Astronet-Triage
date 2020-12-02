@@ -91,7 +91,6 @@ def generate_view(tic_id,
                   flux,
                   period,
                   num_bins,
-                  bin_width,
                   t_min,
                   t_max,
                   normalize=True,
@@ -102,7 +101,6 @@ def generate_view(tic_id,
     time: 1D array of time values, phase folded and sorted in ascending order.
     flux: 1D array of flux values.
     num_bins: The number of intervals to divide the time axis into.
-    bin_width: The width of each bin on the time axis.
     t_min: The inclusive leftmost value to consider on the time axis.
     t_max: The exclusive rightmost value to consider on the time axis.
     normalize: Whether to center the median at 1 and minimum value at 0.
@@ -135,7 +133,7 @@ def generate_view(tic_id,
   return view, std, mask, overshot_mask
 
 
-def global_view(tic_id, time, flux, period, num_bins=201, bin_width_factor=1.2/201):
+def global_view(tic_id, time, flux, period, num_bins=201):
   """Generates a 'global view' of a phase folded light curve.
 
   See Section 3.3 of Shallue & Vanderburg, 2018, The Astronomical Journal.
@@ -146,7 +144,6 @@ def global_view(tic_id, time, flux, period, num_bins=201, bin_width_factor=1.2/2
     flux: 1D array of flux values.
     period: The period of the event (in days).
     num_bins: The number of intervals to divide the time axis into.
-    bin_width_factor: Width of the bins, as a fraction of period.
 
   Returns:
     1D NumPy array of size num_bins containing the median flux values of
@@ -158,7 +155,6 @@ def global_view(tic_id, time, flux, period, num_bins=201, bin_width_factor=1.2/2
       flux,
       period,
       num_bins=num_bins,
-      bin_width=period * bin_width_factor,
       t_min=-period / 2,
       t_max=period / 2)
 
@@ -169,7 +165,6 @@ def local_view(tic_id,
                period,
                duration,
                num_bins=61,
-               bin_width_factor=0.16,
                num_durations=2):
   """Generates a 'local view' of a phase folded light curve.
   See Section 3.3 of Shallue & Vanderburg, 2018, The Astronomical Journal.
@@ -180,7 +175,6 @@ def local_view(tic_id,
     period: The period of the event (in days).
     duration: The duration of the event (in days).
     num_bins: The number of intervals to divide the time axis into.
-    bin_width_factor: Width of the bins, as a fraction of duration.
     num_durations: The number of durations to consider on either side of 0 (the
         event is assumed to be centered at 0).
   Returns:
@@ -193,7 +187,6 @@ def local_view(tic_id,
       flux,
       period,
       num_bins=num_bins,
-      bin_width=duration * bin_width_factor,
       t_min=max(-period / 2, -duration * num_durations),
       t_max=min(period / 2, duration * num_durations))
 
@@ -268,7 +261,6 @@ def secondary_view(tic_id,
                    period,
                    duration,
                    num_bins=61,
-                   bin_width_factor=0.16,
                    num_durations=4):
     """Generates a 'local view' of a phase folded light curve, centered on phase 0.5.
       See Section 3.3 of Shallue & Vanderburg, 2018, The Astronomical Journal.
@@ -279,7 +271,6 @@ def secondary_view(tic_id,
         period: The period of the event (in days).
         duration: The duration of the event (in days).
         num_bins: The number of intervals to divide the time axis into.
-        bin_width_factor: Width of the bins, as a fraction of duration.
         num_durations: The number of durations to consider on either side of 0 (the
             event is assumed to be centered at 0).
       Returns:
@@ -296,18 +287,12 @@ def secondary_view(tic_id,
         t_min = 0.0
         t_max = 0.0
 
-    if bin_width_factor * duration < (t_max - t_min):
-        bin_width = bin_width_factor * duration
-    else:
-        bin_width = (t_max - t_min) / 40
-
     return generate_view(
         tic_id, 
         new_time,
         new_flux,
         period,
         num_bins=num_bins,
-        bin_width=bin_width,
         t_min=t_min,
         t_max=t_max
     )
@@ -338,7 +323,6 @@ def sample_segments_view(tic_id,
                          fold_num,
                          period,
                          num_bins=101,
-                         bin_width_factor=3.0 / 101,
                          num_transits=7):
     times, fluxes, nums = sample_segments(time, flux, fold_num, period, num_transits=num_transits)
     full_view = []
@@ -349,9 +333,9 @@ def sample_segments_view(tic_id,
                 f,
                 period,
                 num_bins=num_bins,
-                bin_width=period * bin_width_factor,
                 t_min=min(t) if len(t) else 0,
                 t_max=max(t) if len(t) else 0,
+                normalize=False,
             )
         full_view.append(view)
         full_view.append(mask)
@@ -360,4 +344,4 @@ def sample_segments_view(tic_id,
         full_view.append(np.zeros([num_bins], dtype=float))
 
     # values in channel i, mask in channel i + 1
-    return np.stack(full_view)
+    return np.stack(full_view, axis=-1)

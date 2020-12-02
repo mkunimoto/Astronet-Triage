@@ -107,6 +107,17 @@ def local_global_new():
             "num_pre_logits_hidden_layers": 4,
             "pre_logits_hidden_layer_size": 512,
             "pre_logits_dropout_rate": 0.0,
+            
+            "aux_inputs": [
+                "Period",
+                "Duration",
+                "Transit_Depth",
+                "Tmag",
+                "star_mass",
+                "star_mass_present",
+                "star_rad",
+                "star_rad_present",
+            ],
           
             "time_series_hidden": {
                 "global_view": {
@@ -260,19 +271,15 @@ def extended():
             "primary_class": 0,
 
             "features": {
-                "local_view": {
-                    "shape": [61],
-                    "is_time_series": True,
-                },
                 "global_view": {
                     "shape": [201],
                     "is_time_series": True,
                 },
-                "secondary_view": {
-                    "shape": [61],
+                "global_mask": {
+                    "shape": [201],
                     "is_time_series": True,
                 },
-                "global_mask": {
+                "global_std": {
                     "shape": [201],
                     "is_time_series": True,
                 },
@@ -289,6 +296,38 @@ def extended():
                     "is_time_series": True,
                 },
                 "global_view_5.0_mask": {
+                    "shape": [201],
+                    "is_time_series": True,
+                },
+                "local_view": {
+                    "shape": [61],
+                    "is_time_series": True,
+                },
+                "local_mask": {
+                    "shape": [61],
+                    "is_time_series": True,
+                },
+                "local_std": {
+                    "shape": [61],
+                    "is_time_series": True,
+                },
+                "secondary_view": {
+                    "shape": [61],
+                    "is_time_series": True,
+                },
+                "secondary_mask": {
+                    "shape": [61],
+                    "is_time_series": True,
+                },
+                "secondary_std": {
+                    "shape": [61],
+                    "is_time_series": True,
+                },
+                "global_view_half_period": {
+                    "shape": [201],
+                    "is_time_series": True,
+                },
+                "global_view_double_period": {
                     "shape": [201],
                     "is_time_series": True,
                 },
@@ -350,7 +389,7 @@ def extended():
                     "shape": [1],
                     "is_time_series": False,
                     "log_scale": True,
-                    "min_val": 300,
+                    "min_val": 0,
                     "max_val": 1000,
                     "has_nans": False,
                 },
@@ -385,7 +424,7 @@ def extended():
                 "star_rad",
                 "star_rad_present",
                 "n_folds",
-                "n_points"
+                "n_points",
             ],
           
             "time_series_hidden": {
@@ -400,11 +439,32 @@ def extended():
                     "pool_strides": 1,
                     "extra_channels": [
                         "global_mask",
-                        "global_view_5.0",
-                        "global_view_5.0_mask",
+                        "global_std",
                         "global_view_0.3",
                         "global_view_0.3_mask",
+                        "global_view_5.0",
+                        "global_view_5.0_mask",
                     ],
+                },
+                "global_view_double_period": {
+                    "cnn_num_blocks": 3,
+                    "cnn_block_size": 1,
+                    "cnn_initial_num_filters": 17,
+                    "cnn_block_filter_factor": 2,
+                    "cnn_kernel_size": 2,
+                    "convolution_padding": "same",
+                    "pool_size": 6,
+                    "pool_strides": 1,
+                },
+                "global_view_half_period": {
+                    "cnn_num_blocks": 3,
+                    "cnn_block_size": 1,
+                    "cnn_initial_num_filters": 17,
+                    "cnn_block_filter_factor": 2,
+                    "cnn_kernel_size": 2,
+                    "convolution_padding": "same",
+                    "pool_size": 6,
+                    "pool_strides": 1,
                 },
                 "local_view": {
                     "cnn_num_blocks": 3,
@@ -415,6 +475,10 @@ def extended():
                     "convolution_padding": "same",
                     "pool_size": 6,
                     "pool_strides": 1,
+                    "extra_channels": [
+                        "local_mask",
+                        "local_std",
+                    ],
                 },
                 "secondary_view": {
                     "cnn_num_blocks": 3,
@@ -425,6 +489,10 @@ def extended():
                     "convolution_padding": "same",
                     "pool_size": 6,
                     "pool_strides": 1,
+                    "extra_channels": [
+                        "secondary_mask",
+                        "secondary_std",
+                    ],
                 },
                 "sample_segments_view": {
                     "cnn_num_blocks": 3,

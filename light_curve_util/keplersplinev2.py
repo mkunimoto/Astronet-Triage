@@ -202,10 +202,13 @@ def kepler_spline(time, flux, bkspace, maxiter=5, input_mask=None):
 
       # Evaluate spline at the time points.
       spline = curve.value(time)[0]
-    except (IndexError, TypeError, ValueError) as e:
+    except (IndexError, ValueError, TypeError) as e:
       # This might be caused by the breakpoint spacing being too small,
       # and/or there being insufficient points to fit the spline in one of the intervals.
-      warnings.warn("Non-fatal spline error: {}".format(e))
+      e_str = str(e)
+      if (('could not broadcast input array' not in e_str)
+          and ('arrays used as indices must be of integer' not in e_str)):
+        warnings.warn("Non-fatal spline error: {}".format(e))
       return None, None, False, True
 
   return spline, mask, False, False
@@ -318,7 +321,7 @@ def choose_kepler_spline(all_time,
     for time, flux, this_input_mask in zip(all_time, all_flux, all_input_mask):
       # Fit B-spline to this light-curve segment.
       spline_piece, mask, too_few_points, bad_bkspace = kepler_spline(
-          time, flux, bkspace=bkspace, maxiter=maxiter, input_mask = this_input_mask)
+          time, flux, bkspace=bkspace, maxiter=maxiter, input_mask=this_input_mask)
       if too_few_points:
         # It's expected to occasionally see intervals with insufficient points,
         # especially if periodic signals have been removed from the light curve.
