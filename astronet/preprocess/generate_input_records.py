@@ -140,7 +140,7 @@ def _set_int64_feature(ex, name, value):
 
 def _process_tce(tce, bkspace=None):
   orig_time, orig_flux = preprocess.read_and_process_light_curve(
-      tce.tic_id, FLAGS.tess_data_dir, 'SAP_FLUX')
+      tce.tic_id, FLAGS.tess_data_dir, 'RawMagnitude')
   ex = tf.train.Example()
 
   detrended_time, detrended_flux, _ = preprocess.detrend_and_filter(
