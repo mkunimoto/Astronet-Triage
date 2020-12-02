@@ -33,14 +33,25 @@ parser.add_argument(
 parser.add_argument(
     "--sector",
     type=int,
-    default=1,
-    help='Sector source of TCEs')
+    help='sector number')
+
+parser.add_argument(
+    "--cam",
+    type=int,
+    help="camera number")
+
+parser.add_argument(
+    "--ccd",
+    type=int,
+    help="ccd number")
 
 FLAGS, unparsed = parser.parse_known_args()
 
-columns = ['tic_id','Tmag','Period','Epoc','Transit_Depth','Duration','Sectors']
+columns = ['tic_id','Tmag','Period','Epoc','Transit_Depth','Duration','Sectors','Camera','CCD']
 tics = np.loadtxt(FLAGS.input, dtype=int)
 lc_tces = pd.DataFrame(columns=columns)
 lc_tces['tic_id'] = tics
 lc_tces['Sectors'] = FLAGS.sector
+lc_tces['Camera'] = FLAGS.cam
+lc_tces['CCD'] = FLAGS.ccd
 lc_tces.to_csv(os.path.join(FLAGS.save_dir, FLAGS.output),index=False)
