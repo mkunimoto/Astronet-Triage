@@ -68,7 +68,7 @@ def read_tess_light_curve(filename, flux_key):
     """
     lc = HDFLightCurve(filename)
     lc.load_from_file(label='all', ap=-1, rawmagkey='RawMagnitude', dmagkey='KSPMagnitude')
-    time = lc.data['jd].astype(float)
+    time = lc.data['jd'].astype(float)
     if flux_key == 'RawMagnitude':
         mag = lc.data['rlc'].astype(float)
     elif flux_key == 'KSPMagnitude':
