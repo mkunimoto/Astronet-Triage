@@ -80,8 +80,8 @@ def process_tce(tce_table):
         tic = int(tce['tic_id'])
         try:
             sector=int(tce['Sectors'])
-            cam=int(tce['cam'])
-            ccd=int(tce['ccd'])
+            cam=int(tce['Camera'])
+            ccd=int(tce['CCD'])
             bls_dir = '/pdo/qlp-data/sector-%i/ffi/cam%i/ccd%i/BLS' % (sector, cam, ccd)
             bls, is_tce = initial_triage(tic, bls_dir)
             if is_tce:
