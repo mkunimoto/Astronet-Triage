@@ -44,7 +44,7 @@ def star_query(ticid):
         star_params[item] = t[:][item][0]
     return star_params
 
-def initial_triage(tic, bls_dir)
+def initial_triage(tic, bls_dir):
     filename = os.path.join(bls_dir, %i.blsanal' % tic)
     bls = readtableline(filename)
     is_tce = True
