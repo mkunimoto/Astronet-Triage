@@ -27,21 +27,47 @@ from light_curve_util import util
 from light_curve_util import tess_io
 from statsmodels.robust import scale
 
-def read_and_process_light_curve(tic, tess_data_dir, flux_key='KSPMagnitude'):
-  file_name = '%s/%s.h5' % (tess_data_dir, tic)
-  all_time, all_flux = tess_io.read_tess_light_curve(file_name, flux_key)
+from patools.util import BinnedStatistics
+
+def read_and_process_light_curve(tic, tess_data_dir, sector, cam, ccd):
+  file_names = tess_io.tess_filenames(tic, tess_data_dir, sector, cam, ccd)
+  assert file_names
+  all_time, all_mag, all_cadences = tess_io.read_tess_light_curve(file_names)
   assert len(all_time)
-  return all_time, all_flux
+  scadence = all_cadences>40000
+  sjd = all_time[scadence]
+  smag = all_mag[scadence]
+  ljd = all_time[~scadence]
+  lmag = all_mag[~scadence]
+  if len(sjd) > 1:
+    t_min = np.nanmin(sjd)
+    t_max = np.nanmax(sjd)
+    num_bins = int(round((t_max - t_min)*48))
+    jdbinboundary = t_min+np.arange(num_bins-1)*(t_max-t_min)/num_bins
+    binnedlc = BinnedStatistics(sjd, smag, jdbinboundary)
+    newjd = binnedlc.average_time_bins
+    view = binnedlc.average()
+    all_time_new = np.array(list(ljd) + list(newjd))
+    all_mag_new = np.array(list(lmag) + list(view))
+  else:
+    all_time_new = ljd
+    all_mag_new = lmag
+  all_flux_new = 10.**(-(all_mag_new - np.nanmedian(all_mag_new))/2.5)
+  nans = np.isnan(all_flux_new) + np.isnan(all_time_new)
+  all_time_new = all_time_new[~nans]
+  all_flux_new = all_flux_new[~nans]
+  return all_time_new, all_flux_new
 
 def get_spline_mask(time, period, t0, tdur):
   phase, _ = util.phase_fold_time(time, period, t0)
   outtran = (np.abs(phase) > (tdur / 2))
   return outtran
 
+
 def filter_outliers(time, flux, mask):
   valid = ~np.isnan(flux)
   return time[valid], flux[valid], mask[valid]
-  return time, flux
+
 
 def detrend_and_filter(tic_id, time, flux, period, epoch, duration, fixed_bkspace):
   input_mask = get_spline_mask(time, period, epoch, duration)
@@ -51,24 +77,9 @@ def detrend_and_filter(tic_id, time, flux, period, epoch, duration, fixed_bkspac
   return filter_outliers(time, detrended_flux, input_mask)
 
 
-def phase_fold_and_sort_light_curve(time, flux, period, t0):
-  """Phase folds a light curve and sorts by ascending time.
-
-  Args:
-    time: 1D NumPy array of time values.
-    flux: 1D NumPy array of flux values.
-    period: A positive real scalar; the period to fold over.
-    t0: The center of the resulting folded vector; this value is mapped to 0.
-
-  Returns:
-    folded_time: 1D NumPy array of phase folded time values in
-        [-period / 2, period / 2), where 0 corresponds to t0 in the original
-        time array. Values are sorted in ascending order.
-    folded_flux: 1D NumPy array. Values are the same as the original input
-        array, but sorted by folded_time.
-  """
+def phase_fold_and_sort_light_curve(time, flux, mask, period, t0):
   if not len(time):
-    return np.array([]), np.array([]), np.array([])
+    return np.array([]), np.array([]), np.array([]), np.array([])
 
   # Phase fold time.
   time, fold_num = util.phase_fold_time(time, period, t0)
@@ -77,9 +88,10 @@ def phase_fold_and_sort_light_curve(time, flux, period, t0):
   sorted_i = np.argsort(time)
   time = time[sorted_i]
   flux = flux[sorted_i]
+  mask = mask[sorted_i]
   fold_num = fold_num[sorted_i]
 
-  return time, flux, fold_num
+  return time, flux, fold_num, mask
 
 
 def generate_view(tic_id,
@@ -90,6 +102,7 @@ def generate_view(tic_id,
                   t_min,
                   t_max,
                   normalize=True,
+                  binning=None
                  ):
   """Generates a view of a phase-folded light curve using a median filter.
 
@@ -105,7 +118,11 @@ def generate_view(tic_id,
     1D NumPy array of size num_bins containing the median flux values of
     uniformly spaced bins on the phase-folded time axis.
   """
-  view, mask, std = median_filter2.new_binning(time, flux, period, num_bins, t_min, t_max)
+  if binning is None:
+    view, mask, std = median_filter2.new_binning(time, flux, period, num_bins, t_min, t_max)
+  else:
+    view, mask, std = median_filter2.new_binning(
+        time, flux, period, num_bins, t_min, t_max, method=binning)
 
   overshot_mask = np.zeros_like(view)
   if normalize:
@@ -153,6 +170,19 @@ def global_view(tic_id, time, flux, period, num_bins=201):
       num_bins=num_bins,
       t_min=-period / 2,
       t_max=period / 2)
+
+
+def tr_mask_view(tic_id, time, tr_mask, period, num_bins=201):
+  return generate_view(
+      tic_id, 
+      time,
+      1 - tr_mask,
+      period,
+      num_bins=num_bins,
+      t_min=-period / 2,
+      t_max=period / 2,
+      normalize=False,
+      binning='max')
 
 
 def local_view(tic_id, 
@@ -318,19 +348,19 @@ def sample_segments_view(tic_id,
                          flux,
                          fold_num,
                          period,
-                         num_bins=101,
+                         num_bins=201,
                          num_transits=7):
     times, fluxes, nums = sample_segments(time, flux, fold_num, period, num_transits=num_transits)
     full_view = []
-    for t, f in zip(times, fluxes):
+    for t, f, n in zip(times, fluxes, nums):
         view, _, mask, _ = generate_view(
                 tic_id, 
                 t,
                 f,
                 period,
                 num_bins=num_bins,
-                t_min=min(t) if len(t) else 0,
-                t_max=max(t) if len(t) else 0,
+                t_min=(period * (n - 0.5)),
+                t_max=(period * (n + 0.5)),
                 normalize=False,
             )
         full_view.append(view)
